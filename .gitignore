@@ -21,3 +21,5 @@ apps/web/.env.local
 apps/api/.env.stripe.local
 .env.admin.local
 apps/api/.env.admin.local
+.env.alphavantage.local
+apps/api/.env.alphavantage.local
