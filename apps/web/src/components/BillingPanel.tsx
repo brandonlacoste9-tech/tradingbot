@@ -186,9 +186,17 @@ function BillingPanelBody({
           <div className="hud-label mb-0.5">plans</div>
           <h3 className="text-sm font-semibold text-white">Plans & billing</h3>
         </div>
-        <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 font-mono text-[10px] text-accent">
-          {loading ? "…" : plan.toUpperCase()}
-        </span>
+        <div className="flex items-center gap-2">
+          <a
+            href="/plans"
+            className="font-mono text-[10px] text-accent hover:underline"
+          >
+            Full page →
+          </a>
+          <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 font-mono text-[10px] text-accent">
+            {loading ? "…" : plan.toUpperCase()}
+          </span>
+        </div>
       </div>
 
       {error && <p className="mb-2 text-xs text-bad">{error}</p>}

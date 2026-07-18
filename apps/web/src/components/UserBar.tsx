@@ -50,11 +50,11 @@ export default function UserBar() {
         user: {userId}
       </span>
       <a
-        href="#plans"
+        href="/plans"
         className="rounded-full border border-accent/35 bg-accent/5 px-2.5 py-1 text-accent hover:bg-accent/15"
-        title="Jump to plans & billing"
+        title="View plans & pricing"
       >
-        plan: {plan} · upgrade
+        plan: {plan} · plans
       </a>
       <span className="rounded-full border border-line px-2.5 py-1 text-slate-500">
         auth: {authMode}

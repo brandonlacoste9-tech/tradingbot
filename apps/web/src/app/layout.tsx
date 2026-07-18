@@ -31,26 +31,36 @@ const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 function AuthChrome() {
   return (
     <header className="relative z-50 flex h-14 items-center justify-between border-b border-line/80 bg-panel/70 px-4 backdrop-blur-xl sm:h-16 sm:px-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10">
-          <span className="font-mono text-sm font-bold text-accent">IT</span>
-        </div>
-        <div className="hidden sm:block">
-          <div className="text-sm font-semibold tracking-wide text-white">
-            IndieTrades
+      <div className="flex items-center gap-3 sm:gap-6">
+        <a href="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10">
+            <span className="font-mono text-sm font-bold text-accent">IT</span>
           </div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/60">
-            paper desk
+          <div className="hidden sm:block">
+            <div className="text-sm font-semibold tracking-wide text-white">
+              IndieTrades
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/60">
+              paper desk
+            </div>
           </div>
-        </div>
+        </a>
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <a
+            href="/"
+            className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
+          >
+            Desk
+          </a>
+          <a
+            href="/plans"
+            className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/20 sm:px-3 sm:text-sm"
+          >
+            Plans
+          </a>
+        </nav>
       </div>
       <div className="flex items-center gap-3">
-        <a
-          href="#plans"
-          className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/20 sm:px-4 sm:py-2 sm:text-sm"
-        >
-          Plans
-        </a>
         <span className="hidden items-center gap-1.5 rounded-full border border-good/30 bg-good/5 px-2.5 py-1 font-mono text-[10px] text-good sm:inline-flex">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
           PAPER ONLY

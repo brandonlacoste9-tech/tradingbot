@@ -133,9 +133,9 @@ export default function HomePage() {
               blockReason={blockReason}
               onRefresh={() => void onValidate()}
               onOpenPlans={() => {
-                document
-                  .getElementById("plans")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                if (typeof window !== "undefined") {
+                  window.location.href = "/plans";
+                }
               }}
             />
           </div>
