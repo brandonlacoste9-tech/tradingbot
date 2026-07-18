@@ -1,27 +1,23 @@
 "use client";
 
+/**
+ * Default home = classic layout + single pixel trade-floor hero.
+ * Optional: /?landing=photos for alternate shell (same hero image).
+ * Optional: NEXT_PUBLIC_LANDING_VARIANT=photos
+ */
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import MarketingLandingClassic from "@/components/marketing-landing-classic";
 import MarketingLandingPhotos from "@/components/marketing-landing-photos";
 
-/**
- * Landing switcher — easy revert between variants.
- *
- * Default: classic (copy + single pixel trade floor shot at top only)
- * Classic: /?landing=classic
- * Photos: /?landing=photos (same hero shot, alternate chrome)
- *
- * Env: NEXT_PUBLIC_LANDING_VARIANT=classic|photos
- */
 function LandingInner() {
   const sp = useSearchParams();
-  const envDefault =
-    (process.env.NEXT_PUBLIC_LANDING_VARIANT || "classic").toLowerCase();
+  const envDefault = (
+    process.env.NEXT_PUBLIC_LANDING_VARIANT || "classic"
+  ).toLowerCase();
   const q = (sp.get("landing") || "").toLowerCase();
-  const variant = q === "classic" || q === "photos" ? q : envDefault;
-
-  if (variant === "photos") {
+  // Always prefer classic unless explicitly photos
+  if (q === "photos" || (q !== "classic" && envDefault === "photos")) {
     return <MarketingLandingPhotos />;
   }
   return <MarketingLandingClassic />;

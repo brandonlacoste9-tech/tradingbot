@@ -1,8 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 import { IndieTradesLogo, IndieTradesMark } from "@/components/indie-trades-logo";
+
+/** Sole hero image — pixel trade floor (Paper only · chart · ticket · blotter) */
+const TRADE_FLOOR_HERO = "/landing/trade-floor-hero.jpg";
 
 const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -87,131 +89,6 @@ function MarketRibbon() {
             <span className={t.u ? "text-good" : "text-bad"}>{t.d}</span>
           </span>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function MiniDeskPreview() {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-line/80 bg-panel/80 shadow-2xl shadow-accent/10 ring-1 ring-accent/15">
-      <div className="flex items-center justify-between border-b border-line/70 px-3 py-2 sm:px-4">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-good">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
-            Paper only
-          </span>
-          <span className="hidden font-mono text-[10px] text-mist sm:inline">
-            US RTH · quotes
-          </span>
-        </div>
-        <span className="font-mono text-[10px] text-accent">IndieTrades floor</span>
-      </div>
-      <div className="grid gap-0 sm:grid-cols-12">
-        <div className="border-b border-line/60 p-3 sm:col-span-3 sm:border-b-0 sm:border-r">
-          <p className="mb-2 font-mono text-[10px] uppercase text-mist">Watchlist</p>
-          {[
-            ["AAPL", "190.12", "+0.4%"],
-            ["SPY", "520.40", "+0.2%"],
-            ["NVDA", "124.80", "−0.6%"],
-          ].map(([sym, px, chg]) => (
-            <div
-              key={sym}
-              className="flex items-center justify-between border-t border-line/40 py-2 font-mono text-xs first:border-0"
-            >
-              <span className="font-bold text-white">{sym}</span>
-              <span className="text-slate-300">{px}</span>
-              <span
-                className={
-                  String(chg).startsWith("−") || String(chg).startsWith("-")
-                    ? "text-bad"
-                    : "text-good"
-                }
-              >
-                {chg}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="p-3 sm:col-span-5 sm:border-r sm:border-line/60">
-          <div className="mb-2 flex items-baseline justify-between">
-            <span className="font-mono text-lg font-bold text-white">AAPL</span>
-            <span className="font-mono text-sm text-good">+0.40%</span>
-          </div>
-          <svg viewBox="0 0 280 100" className="h-24 w-full sm:h-28" aria-hidden>
-            {(
-              [
-                { x: 20, o: 60, up: true },
-                { x: 50, o: 55, up: false },
-                { x: 80, o: 50, up: true },
-                { x: 110, o: 45, up: true },
-                { x: 140, o: 48, up: false },
-                { x: 170, o: 40, up: true },
-                { x: 200, o: 35, up: true },
-                { x: 230, o: 30, up: true },
-                { x: 255, o: 28, up: false },
-              ] as const
-            ).map((bar, i) => {
-              const c = bar.up ? bar.o - 8 : bar.o + 8;
-              const h = bar.o - 12;
-              const l = bar.o + 14;
-              const color = bar.up ? "#22c55e" : "#ef4444";
-              const top = Math.min(bar.o, c);
-              const body = Math.max(2, Math.abs(c - bar.o));
-              return (
-                <g key={i}>
-                  <line
-                    x1={bar.x}
-                    x2={bar.x}
-                    y1={h}
-                    y2={l}
-                    stroke={color}
-                    strokeWidth="1.5"
-                  />
-                  <rect
-                    x={bar.x - 5}
-                    y={top}
-                    width="10"
-                    height={body}
-                    fill={color}
-                    rx="1"
-                  />
-                </g>
-              );
-            })}
-          </svg>
-          <p className="mt-1 font-mono text-[10px] text-mist">
-            Candles · honest source badge · PAPER view
-          </p>
-        </div>
-        <div className="border-t border-line/60 p-3 sm:col-span-4 sm:border-t-0">
-          <p className="mb-2 font-mono text-[10px] uppercase text-mist">Ticket</p>
-          <div className="mb-2 grid grid-cols-2 gap-1.5">
-            <div className="rounded-lg bg-good py-2 text-center text-xs font-bold text-ink">
-              BUY
-            </div>
-            <div className="rounded-lg border border-line py-2 text-center text-xs text-mist">
-              SELL
-            </div>
-          </div>
-          <div className="space-y-1.5 font-mono text-[11px] text-slate-300">
-            <div className="flex justify-between rounded-lg border border-line/60 px-2 py-1.5">
-              <span className="text-mist">Qty</span>
-              <span>10</span>
-            </div>
-            <div className="flex justify-between rounded-lg border border-line/60 px-2 py-1.5">
-              <span className="text-mist">Limit</span>
-              <span>190.00</span>
-            </div>
-            <div className="flex justify-between rounded-lg border border-line/60 px-2 py-1.5">
-              <span className="text-mist">TIF</span>
-              <span>Day</span>
-            </div>
-          </div>
-          <div className="mt-3 rounded-xl bg-accent py-2.5 text-center text-xs font-bold text-ink">
-            Review paper order →
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -342,16 +219,17 @@ export default function MarketingLandingClassic() {
               className="pointer-events-none absolute -inset-4 rounded-3xl bg-accent/10 blur-2xl"
               aria-hidden
             />
-            {/* Single top shot only — pixel trade floor (Paper only · chart · ticket · blotter) */}
+            {/* Only this floor shot — replaces old SVG / AI mock */}
             <div className="relative overflow-hidden rounded-2xl border border-line/80 shadow-2xl shadow-accent/15 ring-1 ring-accent/20">
-              <Image
-                src="/landing/trade-floor-pixel-card.jpg"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={TRADE_FLOOR_HERO}
                 alt="IndieTrades paper trade floor with chart, ticket, and blotter"
                 width={1400}
                 height={900}
                 className="h-auto w-full object-cover object-top"
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
+                decoding="async"
+                fetchPriority="high"
               />
             </div>
             <p className="mt-3 text-center font-mono text-[10px] text-mist">

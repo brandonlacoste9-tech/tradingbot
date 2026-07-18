@@ -107,14 +107,15 @@ function HeroShot() {
           </span>
           <span className="font-mono text-[10px] text-accent">Trade floor</span>
         </div>
-        <Image
-          src="/landing/trade-floor-pixel-card.jpg"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/landing/trade-floor-hero.jpg"
           alt="IndieTrades paper trade floor with chart, ticket, and blotter"
           width={1400}
           height={900}
           className="h-auto w-full object-cover object-top"
-          priority
-          sizes="(max-width: 1024px) 100vw, 50vw"
+          decoding="async"
+          fetchPriority="high"
         />
       </div>
       <p className="mt-3 text-center font-mono text-[10px] text-mist">
