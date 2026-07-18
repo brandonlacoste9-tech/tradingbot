@@ -25,7 +25,11 @@ class Settings(BaseSettings):
     default_max_open_positions: int = 10
     paper_only: bool = True
 
-    cors_origins: str = "http://localhost:3000"
+    # Comma-separated. Include Netlify + local dev. Override via CORS_ORIGINS env.
+    cors_origins: str = (
+        "http://localhost:3000,"
+        "https://hilarious-piroshki-08d173.netlify.app"
+    )
 
 
 @lru_cache

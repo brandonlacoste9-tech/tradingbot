@@ -138,9 +138,24 @@ Without this, the UI loads but shows **API down** (it expects `http://localhost:
 
 Deploying from the **repo root** publishes nothing useful (no `index.html`). The app must build from `apps/web` with publish dir `out` (static export).
 
-### Backend
+### Backend (Render)
 
-Run FastAPI separately (local, Railway, Render, Fly.io, etc.) and set `NEXT_PUBLIC_API_URL` + CORS on the API to your Netlify domain.
+This repo includes a **Render Blueprint** at `render.yaml` for the FastAPI API.
+
+1. [Render Dashboard → New → Blueprint](https://dashboard.render.com/select-repo?type=blueprint)
+2. Connect `brandonlacoste9-tech/tradingbot`
+3. Apply the blueprint → service **`tradingbot-api`**
+4. In the service → **Environment**, set secrets:
+   - `ALPACA_API_KEY_ID` (paper)
+   - `ALPACA_API_SECRET_KEY` (paper)
+5. After deploy, note the service URL, e.g. `https://tradingbot-api.onrender.com`
+6. On **Netlify** → Site env:
+   - `NEXT_PUBLIC_API_URL=https://tradingbot-api.onrender.com`
+7. Trigger a Netlify redeploy so the frontend picks up the API URL
+
+Health check: `GET /health`
+
+Local API still works: `uvicorn app.main:app --reload --port 8000` from `apps/api`.
 
 ## Next moves
 
