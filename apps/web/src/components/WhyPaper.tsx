@@ -11,7 +11,7 @@ const REASONS = [
   {
     icon: "🧭",
     title: "Not sure where to start",
-    body: "AI Desk for research. Trade floor for tickets. Policy + confirm so you learn safely.",
+    body: "Grok as your research bro on AI Desk. Trade floor when you’re ready to ticket. Policy + confirm keeps it safe.",
   },
   {
     icon: "🧪",
@@ -20,8 +20,8 @@ const REASONS = [
   },
   {
     icon: "🛡️",
-    title: "Not a DIY API bot",
-    body: "Grok proposes. Code enforces risk. You confirm. Paper fills. Audit trail included.",
+    title: "Bro, not autopilot",
+    body: "Grok digs and proposes. Code enforces risk. You confirm. Paper fills. No “bot spent your money.”",
   },
 ];
 

@@ -154,12 +154,13 @@ function HomePageBody({
             <div>
               <p className="hud-label mb-1">AI Desk</p>
               <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
-                AI Desk
+                Grok is your market bro
               </h1>
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-mist">
-                Chat with Grok → it may propose a paper trade →{" "}
-                <strong className="font-medium text-slate-300">you confirm</strong>.
-                Or skip the chat and practice on the floor.
+                Ask for quotes, ideas, a thesis — Grok digs so you don&apos;t have to.
+                If it proposes a paper trade,{" "}
+                <strong className="font-medium text-slate-300">you still confirm</strong>.
+                No autopilot. No live brokerage.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <a

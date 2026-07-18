@@ -13,7 +13,11 @@ export function getSiteUrl(): string {
 export const SITE_NAME = "IndieTrades";
 
 export const DEFAULT_DESCRIPTION =
-  "IndieTrades is an AI paper trading desk: Grok researches, a policy engine gates risk, you confirm, PaperSim fills. Real stock symbols, virtual money. Not investment advice.";
+  "IndieTrades: Grok as your stock market research bro — digs on ideas, policy checks risk, you confirm, paper fills. Real tickers, virtual cash. Not investment advice.";
+
+/** Short brand line for hero / social */
+export const BRAND_TAGLINE =
+  "Grok is your market research bro. You still make the call.";
 
 export const SEO_KEYWORDS = [
   "paper trading",
@@ -23,6 +27,9 @@ export const SEO_KEYWORDS = [
   "AI trading desk",
   "paper trade stocks",
   "Grok trading",
+  "Grok stock market",
+  "Grok paper trading",
+  "AI stock research",
   "Claude trading bot alternative",
   "Webull paper trading alternative",
   "practice stock trading free",

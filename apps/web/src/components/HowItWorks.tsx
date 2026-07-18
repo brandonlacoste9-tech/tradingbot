@@ -1,10 +1,10 @@
 "use client";
 
 const STEPS = [
-  { n: "1", t: "Research" },
+  { n: "1", t: "Ask Grok" },
   { n: "2", t: "Propose" },
   { n: "3", t: "Policy" },
-  { n: "4", t: "Confirm" },
+  { n: "4", t: "You confirm" },
 ];
 
 /** Slim pipeline strip — keeps education without eating the fold. */

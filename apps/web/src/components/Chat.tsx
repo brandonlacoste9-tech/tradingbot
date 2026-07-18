@@ -214,10 +214,12 @@ function ChatBody({
       <div className="border-b border-line/80 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="hud-label">Chat</div>
-            <h2 className="text-base font-semibold text-white">Research desk</h2>
+            <div className="hud-label">Chat · Grok</div>
+            <h2 className="text-base font-semibold text-white">
+              Your market research bro
+            </h2>
             <p className="text-xs text-mist">
-              Ask for a quote, research, or a paper proposal
+              Quotes, newsy digs, paper proposals — he talks, you approve
             </p>
           </div>
           {busy && (
