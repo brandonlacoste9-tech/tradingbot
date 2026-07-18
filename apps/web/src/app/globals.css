@@ -4,10 +4,13 @@
 
 :root {
   color-scheme: dark;
+  --font-geist-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-geist-mono: ui-monospace, monospace;
 }
 
 body {
   @apply bg-ink text-slate-100 antialiased;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 * {

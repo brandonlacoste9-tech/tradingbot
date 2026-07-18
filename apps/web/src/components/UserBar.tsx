@@ -2,16 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { getDemoUserId, me, setAuthToken, setDemoUserId } from "@/lib/api";
-import ClerkAuthHeader from "./ClerkAuthHeader";
 
 const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 );
 
 /**
- * Tenant identity.
- * - Without Clerk: demo multi-user via local X-User-Id.
- * - With Clerk: Sign in / UserButton + JWT synced via ClerkTokenSync.
+ * Tenant / plan chips.
+ * Auth buttons live in root layout (Clerk quickstart header).
+ * Demo multi-user switch remains when Clerk is not configured.
  */
 export default function UserBar() {
   const [userId, setUserId] = useState(getDemoUserId());
@@ -47,7 +46,6 @@ export default function UserBar() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
-      {clerkEnabled && <ClerkAuthHeader />}
       <span className="rounded-full border border-line px-2.5 py-1 font-mono text-slate-300">
         user: {userId}
       </span>
