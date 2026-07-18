@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { chat } from "@/lib/api";
+import { chat, getApiBase, health } from "@/lib/api";
 import type { ChatResponse, TradeProposal } from "@/lib/types";
 import PreflightModal from "./PreflightModal";
 
@@ -90,13 +90,22 @@ export default function Chat({
       setMessages((m) => [...m, userMsg]);
 
       try {
+        // Wake cold Render instance before the long LLM call
+        try {
+          await health();
+        } catch {
+          /* still try chat */
+        }
         const res = await chat(text);
+        const modeLabel = [res.mode, res.provider, res.model]
+          .filter(Boolean)
+          .join(" · ");
         const assistant: Msg = {
           id: crypto.randomUUID(),
           role: "assistant",
           text: res.assistant_text,
           tools: res.tool_results,
-          mode: res.mode,
+          mode: modeLabel || res.mode,
           model: res.model,
           usage: res.usage,
         };
@@ -119,12 +128,17 @@ export default function Chat({
           ]);
         }
       } catch (e) {
+        const raw = e instanceof Error ? e.message : "Chat failed";
+        const hint =
+          /sign in|401|bearer|token/i.test(raw)
+            ? raw
+            : `${raw} (API: ${getApiBase()})`;
         setMessages((m) => [
           ...m,
           {
             id: crypto.randomUUID(),
             role: "system",
-            text: e instanceof Error ? e.message : "Chat failed",
+            text: hint,
           },
         ]);
       } finally {

@@ -7,7 +7,13 @@ import type {
   TradeProposal,
 } from "./types";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+).replace(/\/$/, "");
+
+const clerkEnabled = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+);
 
 /** Tenant id for AUTH_MODE=disabled. Overridden by Clerk JWT when enabled. */
 let demoUserId =
@@ -16,6 +22,8 @@ let demoUserId =
   "demo";
 
 let authToken: string | null = null;
+/** Optional async token provider (Clerk getToken) so requests wait for a fresh JWT. */
+let tokenProvider: (() => Promise<string | null>) | null = null;
 
 export function setDemoUserId(id: string) {
   demoUserId = id || "demo";
@@ -32,41 +40,101 @@ export function setAuthToken(token: string | null) {
   authToken = token;
 }
 
-function authHeaders(): Record<string, string> {
+export function setTokenProvider(fn: (() => Promise<string | null>) | null) {
+  tokenProvider = fn;
+}
+
+export function getApiBase() {
+  return BASE;
+}
+
+async function resolveToken(): Promise<string | null> {
+  if (tokenProvider) {
+    try {
+      const t = await tokenProvider();
+      if (t) {
+        authToken = t;
+        return t;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return authToken;
+}
+
+function authHeaders(token: string | null): Record<string, string> {
   const h: Record<string, string> = {
     "Content-Type": "application/json",
+    Accept: "application/json",
   };
-  if (authToken) {
-    h.Authorization = `Bearer ${authToken}`;
-  } else {
+  if (token) {
+    h.Authorization = `Bearer ${token}`;
+  } else if (!clerkEnabled) {
     h["X-User-Id"] = demoUserId;
   }
   return h;
 }
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      ...authHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
+  const token = await resolveToken();
+  if (clerkEnabled && !token && path !== "/health") {
+    throw new Error("Sign in required — API is in Clerk mode (missing session token).");
+  }
+
+  const url = `${BASE}${path}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...init,
+      mode: "cors",
+      credentials: "omit",
+      headers: {
+        ...authHeaders(token),
+        ...(init?.headers || {}),
+      },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "network error";
+    throw new Error(
+      `Failed to reach API at ${BASE}${path} (${msg}). ` +
+        `If this is a cold start, wait ~30s and retry. Check NEXT_PUBLIC_API_URL and CORS.`
+    );
+  }
+
   if (!res.ok) {
     let detail = res.statusText;
     try {
       const body = await res.json();
-      detail = body.detail || JSON.stringify(body);
+      detail =
+        typeof body.detail === "string"
+          ? body.detail
+          : body.detail
+            ? JSON.stringify(body.detail)
+            : JSON.stringify(body);
     } catch {
       /* ignore */
     }
-    throw new Error(detail);
+    if (res.status === 401) {
+      throw new Error(
+        `Auth failed (401): ${detail}. Sign out/in if your session expired.`
+      );
+    }
+    throw new Error(detail || `HTTP ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
 
 export function health() {
-  return req<HealthInfo>("/health");
+  // Health is public — allow without Clerk token
+  return fetch(`${BASE}/health`, {
+    mode: "cors",
+    credentials: "omit",
+    headers: { Accept: "application/json" },
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`Health ${res.status}`);
+    return res.json() as Promise<HealthInfo>;
+  });
 }
 
 export function me() {

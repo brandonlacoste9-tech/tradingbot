@@ -2,10 +2,11 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useEffect } from "react";
-import { setAuthToken } from "@/lib/api";
+import { setAuthToken, setTokenProvider } from "@/lib/api";
 
 /**
  * Pushes the Clerk session JWT into the FastAPI client so AUTH_MODE=clerk works.
+ * Registers an async token provider so chat waits for a fresh JWT.
  */
 export default function ClerkTokenSync() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
@@ -13,28 +14,41 @@ export default function ClerkTokenSync() {
   useEffect(() => {
     let cancelled = false;
 
-    async function sync() {
-      if (!isLoaded) return;
-      if (!isSignedIn) {
-        setAuthToken(null);
-        return;
+    async function pull(): Promise<string | null> {
+      if (!isLoaded || !isSignedIn) {
+        return null;
       }
       try {
-        const token = await getToken();
-        if (!cancelled) {
-          setAuthToken(token);
-        }
+        // Fresh token — avoids expired JWT after idle
+        const token = await getToken({ skipCache: true });
+        return token;
       } catch {
-        if (!cancelled) setAuthToken(null);
+        return null;
       }
     }
 
+    setTokenProvider(async () => {
+      if (!isLoaded) return null;
+      if (!isSignedIn) return null;
+      return pull();
+    });
+
+    async function sync() {
+      if (!isLoaded) return;
+      if (!isSignedIn) {
+        if (!cancelled) setAuthToken(null);
+        return;
+      }
+      const token = await pull();
+      if (!cancelled) setAuthToken(token);
+    }
+
     void sync();
-    // Refresh token periodically (Clerk sessions rotate)
-    const id = window.setInterval(() => void sync(), 50_000);
+    const id = window.setInterval(() => void sync(), 40_000);
     return () => {
       cancelled = true;
       window.clearInterval(id);
+      setTokenProvider(null);
     };
   }, [isLoaded, isSignedIn, getToken]);
 
