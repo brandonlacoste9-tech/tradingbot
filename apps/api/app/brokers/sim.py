@@ -29,7 +29,12 @@ _SEED_MARKS: dict[str, Decimal] = {
 
 
 class PaperSimBroker:
-    def __init__(self, starting_cash: Decimal = Decimal("100000")):
+    def __init__(
+        self,
+        starting_cash: Decimal = Decimal("100000"),
+        user_id: str | None = None,
+    ):
+        self.user_id = user_id
         self._lock = threading.Lock()
         self._cash = starting_cash
         self._equity_start = starting_cash
@@ -37,6 +42,43 @@ class PaperSimBroker:
         self._orders_by_client: dict[str, dict[str, Any]] = {}
         self._orders_by_id: dict[str, dict[str, Any]] = {}
         self._marks = dict(_SEED_MARKS)
+        self._hydrated = False
+
+    def export_state(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "cash": self._cash,
+                "starting_cash": self._equity_start,
+                "positions": {
+                    s: {"qty": p["qty"], "avg": p["avg"]}
+                    for s, p in self._positions.items()
+                },
+                "marks": dict(self._marks),
+                "client_orders": dict(self._orders_by_client),
+            }
+
+    def import_state(self, state: dict[str, Any]) -> None:
+        with self._lock:
+            self._cash = Decimal(str(state["cash"]))
+            self._equity_start = Decimal(
+                str(state.get("starting_cash") or state["cash"])
+            )
+            self._positions = {
+                s: {
+                    "qty": Decimal(str(p["qty"])),
+                    "avg": Decimal(str(p["avg"])),
+                }
+                for s, p in (state.get("positions") or {}).items()
+            }
+            marks = state.get("marks") or {}
+            self._marks = {**_SEED_MARKS, **{k: Decimal(str(v)) for k, v in marks.items()}}
+            self._orders_by_client = dict(state.get("client_orders") or {})
+            self._orders_by_id = {
+                o["id"]: o
+                for o in self._orders_by_client.values()
+                if isinstance(o, dict) and o.get("id")
+            }
+            self._hydrated = True
 
     @property
     def is_paper_url(self) -> bool:
@@ -229,7 +271,30 @@ class PaperSimBroker:
             }
             self._orders_by_client[client_order_id] = order
             self._orders_by_id[oid] = order
-            return order
+
+        await self._persist()
+        return order
+
+    async def _persist(self) -> None:
+        if not self.user_id:
+            return
+        try:
+            from app.db.pool import is_db_available
+            from app.db.repo import save_paper_state
+
+            if not is_db_available():
+                return
+            st = self.export_state()
+            await save_paper_state(
+                self.user_id,
+                cash=st["cash"],
+                starting_cash=st["starting_cash"],
+                positions=st["positions"],
+                marks=st["marks"],
+                client_orders=st["client_orders"],
+            )
+        except Exception:  # noqa: BLE001
+            pass  # memory remains source of truth if DB write fails
 
     async def cancel_order(self, broker_order_id: str) -> Any:
         with self._lock:

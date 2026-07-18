@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     )
 
     database_url: str = "postgresql://trading:trading@localhost:5432/ai_trading"
+    # Set true to force memory-only (skip Postgres even if URL set)
+    database_url_disabled: bool = False
     confirm_ttl_seconds: int = 180
 
     # Auth: disabled (demo multi-tenant via X-User-Id) | clerk

@@ -40,7 +40,8 @@ class TradeProposal:
 
 
 class MemoryStore:
-    def __init__(self) -> None:
+    def __init__(self, user_id: str | None = None) -> None:
+        self.user_id = user_id
         self._lock = threading.Lock()
         self.proposals: dict[str, TradeProposal] = {}
         self.orders: list[dict[str, Any]] = []
@@ -48,7 +49,7 @@ class MemoryStore:
         self.audit: list[dict[str, Any]] = []
         self.connection: dict[str, Any] | None = None
         self.profile: dict[str, Any] | None = None
-        # Per-tenant paper sim can be attached later (PR2)
+        self._hydrated = False
 
     def audit_event(self, actor: str, action: str, details: dict[str, Any] | None = None) -> None:
         with self._lock:

@@ -176,7 +176,7 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 4. [x] Desk UI: health chips, portfolio stats, positions, auto-validate  
 5. [x] **IBKR paper path** — hardened client, `/broker/status`, `docs/IBKR_SETUP.md`, scripts  
 6. [x] **PR1 tenancy** — user-scoped store + per-user PaperSim + auth modes (disabled/clerk)  
-7. [ ] **PR2** Postgres persistence for paper books + journals  
+7. [x] **PR2** Postgres persistence (hydrate/flush; falls back to memory)  
 8. [ ] **PR3** Stripe → **PR4** quotas  
 9. [ ] Clerk SignIn UI when publishable key configured  
 10. [ ] Owner optional: IBKR Gateway local; not SaaS default  

@@ -11,5 +11,7 @@ openai>=1.40.0
 anthropic>=0.40.0
 # Clerk JWT verification
 python-jose[cryptography]>=3.3.0
+# Postgres (PR2 persistence)
+asyncpg>=0.29.0
 # IBKR paper (local Gateway only — required for BROKER_BACKEND=ibkr):
 ib_async>=1.0.0
