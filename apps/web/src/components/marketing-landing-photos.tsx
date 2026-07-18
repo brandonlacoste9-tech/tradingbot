@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 import { IndieTradesLogo, IndieTradesMark } from "@/components/indie-trades-logo";
 
