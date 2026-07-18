@@ -2,8 +2,9 @@
 
 **Product:** IndieTrades · https://indietrades.com  
 **Surface:** `/trade` (paper trading floor)  
-**Status:** Phase 1 + Phase 2 shipping — stop and feel before Phase 3  
+**Status:** Phase 1 + Phase 2 + any-ticker shipped — team bounce on Phase 3  
 **Date:** 2026-07-18  
+**Team status:** [`docs/TRADE_FLOOR_TEAM_STATUS.md`](./TRADE_FLOOR_TEAM_STATUS.md)
 
 **Owner intent:** Make `/trade` look and feel like a real stock trading screen, while staying **paper-only**, with **policy + human confirm**, and optional **Grok research** on AI Desk.
 
@@ -235,4 +236,5 @@ See §12 Decision log.
 
 ---
 
-**Status:** Decisions locked. **Phase 1 + Phase 2 implemented** — stop and feel on `/trade` before Phase 3.
+**Status:** Phase 1 + Phase 2 + any-ticker implemented.  
+**Next:** Team bounce on Phase 3 fill model — see [`TRADE_FLOOR_TEAM_STATUS.md`](./TRADE_FLOOR_TEAM_STATUS.md).
