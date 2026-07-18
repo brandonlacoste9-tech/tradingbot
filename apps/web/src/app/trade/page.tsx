@@ -28,9 +28,35 @@ const clerkEnabled = Boolean(
 
 const DEFAULT_WATCH = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META"];
 const QUICK_QTY = ["1", "5", "10", "25", "100"];
+const WATCH_STORAGE_KEY = "indietrades.watchlist.v1";
+const WATCH_MAX = 16;
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
+
+/** US-style equity ticker: AAPL, BRK.B, etc. */
+function normalizeTicker(raw: string): string | null {
+  const s = raw.trim().toUpperCase().replace(/\s+/g, "");
+  if (!s || s.length > 8) return null;
+  if (!/^[A-Z][A-Z0-9.\-]*$/.test(s)) return null;
+  return s;
+}
+
+function loadWatchlist(): string[] {
+  if (typeof window === "undefined") return DEFAULT_WATCH;
+  try {
+    const raw = localStorage.getItem(WATCH_STORAGE_KEY);
+    if (!raw) return DEFAULT_WATCH;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return DEFAULT_WATCH;
+    const clean = parsed
+      .map((x) => normalizeTicker(String(x)))
+      .filter((x): x is string => Boolean(x));
+    return clean.length ? [...new Set(clean)].slice(0, WATCH_MAX) : DEFAULT_WATCH;
+  } catch {
+    return DEFAULT_WATCH;
+  }
+}
 
 type QuoteRow = {
   price: string | null;
@@ -145,6 +171,8 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const [orders, setOrders] = useState<Record<string, unknown>[]>([]);
   const [quotes, setQuotes] = useState<Record<string, QuoteRow>>({});
   const [watch, setWatch] = useState<string[]>(DEFAULT_WATCH);
+  const [watchHydrated, setWatchHydrated] = useState(false);
+  const [addDraft, setAddDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -179,6 +207,60 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     window.setTimeout(() => setCelebrate(null), ms);
   }, []);
 
+  // Hydrate watchlist from localStorage once (any ticker the user added sticks)
+  useEffect(() => {
+    setWatch(loadWatchlist());
+    setWatchHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!watchHydrated) return;
+    try {
+      localStorage.setItem(WATCH_STORAGE_KEY, JSON.stringify(watch));
+    } catch {
+      /* private mode / quota */
+    }
+  }, [watch, watchHydrated]);
+
+  /** Put ticker on watch (front). select=true opens chart + ticket. */
+  const ensureOnWatch = useCallback(
+    (raw: string, opts?: { select?: boolean; announce?: boolean }) => {
+      const s = normalizeTicker(raw);
+      if (!s) return null;
+      setWatch((w) => {
+        if (w.includes(s) && w[0] === s) return w;
+        return [s, ...w.filter((x) => x !== s)].slice(0, WATCH_MAX);
+      });
+      const shouldSelect = opts?.select !== false;
+      if (shouldSelect) {
+        setSymbol(s);
+        setLimit(quotes[s]?.price || "");
+      }
+      if (opts?.announce) {
+        setFlash(`Watching ${s} — chart + ticket ready (paper).`);
+        window.setTimeout(() => setFlash(null), 2800);
+      }
+      return s;
+    },
+    [quotes]
+  );
+
+  const removeFromWatch = useCallback(
+    (sym: string) => {
+      const s = sym.toUpperCase();
+      setWatch((w) => {
+        const next = w.filter((x) => x !== s);
+        const final = next.length ? next : [...DEFAULT_WATCH];
+        if (symbol.toUpperCase() === s) {
+          setSymbol(final[0]);
+          setLimit("");
+        }
+        return final;
+      });
+    },
+    [symbol]
+  );
+
   const refresh = useCallback(async () => {
     if (!signedIn) return;
     setError(null);
@@ -198,9 +280,17 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   }, [signedIn]);
 
   const refreshQuotes = useCallback(async () => {
-    if (!signedIn || watch.length === 0) return;
+    if (!signedIn) return;
+    const active = normalizeTicker(symbol);
+    // Always include active ticket symbol even if not yet on the list
+    const syms = [
+      ...new Set(
+        [...watch, active].filter((x): x is string => Boolean(x))
+      ),
+    ].slice(0, 12);
+    if (syms.length === 0) return;
     try {
-      const res = await marketQuotes(watch);
+      const res = await marketQuotes(syms);
       const map: Record<string, QuoteRow> = {};
       for (const q of res.quotes) {
         map[q.symbol] = {
@@ -215,7 +305,8 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
       setQuotesAt(new Date().toISOString());
       setLimit((prev) => {
         if (prev.trim()) return prev;
-        return map[symbol.toUpperCase()]?.price || prev;
+        const key = active || symbol.toUpperCase();
+        return map[key]?.price || prev;
       });
     } catch {
       /* ignore */
@@ -297,9 +388,13 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   }, [side, cash, limit, selectedPx]);
 
   function pickSymbol(sym: string) {
-    setSymbol(sym);
-    const px = quotes[sym]?.price;
-    if (px) setLimit(px);
+    ensureOnWatch(sym, { select: true });
+  }
+
+  function commitTicketSymbol() {
+    const s = normalizeTicker(symbol);
+    if (!s) return;
+    ensureOnWatch(s, { select: true });
   }
 
   async function onReviewOrder(e: FormEvent) {
@@ -308,8 +403,16 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     setError(null);
     setFlash(null);
     try {
+      const sym = normalizeTicker(symbol);
+      if (!sym) {
+        setError("Enter a valid ticker (e.g. COST, SOFI)");
+        setBusy(false);
+        return;
+      }
+      // Keep anything you trade on the watchlist for next time
+      ensureOnWatch(sym, { select: true });
       const res = await createProposal({
-        symbol: symbol.trim().toUpperCase(),
+        symbol: sym,
         side,
         qty,
         order_type: "limit",
@@ -517,11 +620,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 const active = symbol.toUpperCase() === sym;
                 const pct = fmtPct(q?.change_percent);
                 return (
-                  <li key={sym}>
+                  <li key={sym} className="group flex items-stretch gap-0.5">
                     <button
                       type="button"
                       onClick={() => pickSymbol(sym)}
-                      className={`grid w-full grid-cols-[1fr_auto_auto] items-center gap-2 px-1 py-2.5 text-left transition ${
+                      className={`grid min-w-0 flex-1 grid-cols-[1fr_auto_auto] items-center gap-2 px-1 py-2.5 text-left transition ${
                         active
                           ? "bg-accent/10 ring-1 ring-inset ring-accent/30"
                           : "hover:bg-white/5"
@@ -534,42 +637,62 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                         {q?.ok ? fmtPx(q.price) : "…"}
                       </span>
                       <span
-                        className="w-16 text-right font-mono text-xs font-semibold"
+                        className="w-14 text-right font-mono text-xs font-semibold sm:w-16"
                         style={{ color: chgColor(q?.change_percent) }}
                       >
                         {pct ?? "—"}
                       </span>
+                    </button>
+                    <button
+                      type="button"
+                      title={`Remove ${sym}`}
+                      aria-label={`Remove ${sym} from watchlist`}
+                      onClick={() => removeFromWatch(sym)}
+                      className="min-h-10 min-w-9 shrink-0 rounded-lg px-1 text-mist opacity-70 transition hover:bg-bad/15 hover:text-bad group-hover:opacity-100"
+                    >
+                      ×
                     </button>
                   </li>
                 );
               })}
             </ul>
             <form
-              className="mt-3 flex gap-2 border-t border-line/60 pt-3"
+              className="mt-3 space-y-2 border-t border-line/60 pt-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                const s = String(fd.get("add") || "")
-                  .trim()
-                  .toUpperCase();
-                if (s && !watch.includes(s)) {
-                  setWatch((w) => [...w, s].slice(0, 16));
+                const s = ensureOnWatch(addDraft, {
+                  select: true,
+                  announce: true,
+                });
+                if (!s) {
+                  setError("Enter a ticker like COST, SOFI, or BRK.B");
+                  return;
                 }
-                e.currentTarget.reset();
+                setError(null);
+                setAddDraft("");
               }}
             >
-              <input
-                name="add"
-                placeholder="Add"
-                className="hud-input min-h-10 flex-1 rounded-lg px-3 py-2 font-mono text-sm uppercase"
-                maxLength={8}
-              />
-              <button
-                type="submit"
-                className="min-h-10 rounded-lg border border-accent/40 px-3 text-xs font-semibold text-accent"
-              >
-                Add
-              </button>
+              <p className="font-mono text-[10px] text-mist">
+                Any US ticker — not just the list
+              </p>
+              <div className="flex gap-2">
+                <input
+                  value={addDraft}
+                  onChange={(e) => setAddDraft(e.target.value.toUpperCase())}
+                  placeholder="e.g. COST"
+                  className="hud-input min-h-10 flex-1 rounded-lg px-3 py-2 font-mono text-sm uppercase"
+                  maxLength={8}
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Add ticker to watchlist"
+                />
+                <button
+                  type="submit"
+                  className="min-h-10 shrink-0 rounded-lg border border-accent/40 bg-accent/10 px-3 text-xs font-semibold text-accent"
+                >
+                  Open
+                </button>
+              </div>
             </form>
           </section>
 
@@ -622,14 +745,27 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 </div>
                 <label className="block">
                   <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
-                    Symbol
+                    Symbol{" "}
+                    <span className="normal-case text-mist/80">
+                      (any ticker — adds to watch)
+                    </span>
                   </span>
                   <input
                     value={symbol}
                     onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                    onBlur={() => commitTicketSymbol()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitTicketSymbol();
+                      }
+                    }}
                     className="hud-input w-full rounded-xl px-3 py-3 font-mono text-lg font-bold uppercase"
                     required
                     maxLength={8}
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="AAPL"
                   />
                 </label>
                 <div className="grid grid-cols-3 gap-2">
