@@ -2,7 +2,7 @@
 Agent loop.
 
 - Demo path: keyword intent extraction (no LLM key required).
-- Real path: outline for Claude/Anthropic tool-calling using tools/schemas.py.
+- Real path: Anthropic Messages API tool-calling using tools/schemas.py.
 
 Hard rule: this module may CREATE proposals and HOLD journals.
 It never submits orders. Submission only happens after human confirm + policy re-check.
@@ -10,9 +10,10 @@ It never submits orders. Submission only happens after human confirm + policy re
 
 from __future__ import annotations
 
+import json
 import re
 from decimal import Decimal
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from app.tools.schemas import as_anthropic_tools
 
@@ -27,33 +28,144 @@ Rules:
 - Respect risk limits; the policy engine will reject unsafe sizes.
 - Paper trading only unless the user has explicitly enabled live mode (not available in MVP).
 - Never claim live brokerage access for Canadian users on Alpaca — use sim or IBKR paper.
+- After tool results, synthesize a short clear answer for the user.
+- When proposing, include a real thesis in the reason field (not placeholder text).
 """
 
+# Max tool-use rounds per user turn (prevents runaway loops)
+MAX_TOOL_ROUNDS = 6
 
-async def run_agent_turn_llm(user_message: str, tool_executor) -> dict[str, Any]:
-    """
-    Outline for real LLM integration (Claude Messages API + tools).
+ToolExecutor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 
-    Pseudocode:
-      client = anthropic.AsyncAnthropic()
-      messages = [{"role": "user", "content": user_message}]
-      while True:
-          resp = await client.messages.create(
-              model="claude-sonnet-4-...",
-              max_tokens=2048,
-              system=SYSTEM_PROMPT,
-              tools=as_anthropic_tools(),
-              messages=messages,
-          )
-          # append assistant content
-          # for each tool_use: execute via tool_executor (propose → policy, never submit)
-          # if end_turn: return text + side effects
+
+async def run_agent_turn_llm(
+    user_message: str,
+    tool_executor: ToolExecutor,
+    *,
+    api_key: str | None = None,
+    model: str = "claude-sonnet-4-20250514",
+) -> dict[str, Any]:
     """
-    _ = as_anthropic_tools()
-    raise NotImplementedError(
-        "Wire Anthropic/OpenAI/xAI tool-calling here. "
-        "Demo path is run_agent_turn_demo()."
+    Real LLM path: Anthropic Messages API with tool use.
+
+    tool_executor(tool_name, args) must run the same path as /agent/chat demo tools
+    (propose_order → policy gate only; never broker submit).
+    """
+    try:
+        import anthropic
+    except ImportError as e:
+        raise RuntimeError(
+            "anthropic package not installed. pip install anthropic "
+            "(or use demo path without ANTHROPIC_API_KEY)"
+        ) from e
+
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+
+    client = anthropic.AsyncAnthropic(api_key=api_key)
+    tools = as_anthropic_tools()
+    messages: list[dict[str, Any]] = [
+        {"role": "user", "content": user_message},
+    ]
+
+    collected_actions: list[dict[str, Any]] = []
+    collected_results: list[dict[str, Any]] = []
+    final_text_parts: list[str] = []
+
+    for _round in range(MAX_TOOL_ROUNDS):
+        resp = await client.messages.create(
+            model=model,
+            max_tokens=2048,
+            system=SYSTEM_PROMPT,
+            tools=tools,
+            messages=messages,
+        )
+
+        # Collect assistant content blocks
+        assistant_content = resp.content
+        messages.append(
+            {
+                "role": "assistant",
+                "content": [
+                    block.model_dump(exclude_none=True)
+                    if hasattr(block, "model_dump")
+                    else _block_to_dict(block)
+                    for block in assistant_content
+                ],
+            }
+        )
+
+        tool_uses = [b for b in assistant_content if getattr(b, "type", None) == "tool_use"]
+        text_blocks = [
+            getattr(b, "text", "")
+            for b in assistant_content
+            if getattr(b, "type", None) == "text"
+        ]
+        if text_blocks:
+            final_text_parts.extend(t for t in text_blocks if t)
+
+        if resp.stop_reason == "end_turn" or not tool_uses:
+            break
+
+        # Execute tools and feed results back
+        tool_result_content: list[dict[str, Any]] = []
+        for tu in tool_uses:
+            name = tu.name
+            args = tu.input if isinstance(tu.input, dict) else {}
+            tool_id = tu.id
+
+            collected_actions.append({"tool": name, "args": args})
+            try:
+                result = await tool_executor(name, args)
+                collected_results.append({"tool": name, "ok": True, "result": result})
+                result_payload = result
+            except Exception as e:  # noqa: BLE001
+                collected_results.append({"tool": name, "ok": False, "error": str(e)})
+                result_payload = {"error": str(e)}
+
+            tool_result_content.append(
+                {
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": _safe_json(result_payload),
+                }
+            )
+
+        messages.append({"role": "user", "content": tool_result_content})
+
+    assistant_text = "\n".join(final_text_parts).strip() or (
+        "Done. See tool results for details."
     )
+
+    return {
+        "mode": "llm",
+        "assistant_text": assistant_text,
+        "actions": collected_actions,
+        "tool_results": collected_results,
+        "model": model,
+    }
+
+
+def _block_to_dict(block: Any) -> dict[str, Any]:
+    """Fallback serializer for content blocks without model_dump."""
+    t = getattr(block, "type", None)
+    if t == "text":
+        return {"type": "text", "text": getattr(block, "text", "")}
+    if t == "tool_use":
+        return {
+            "type": "tool_use",
+            "id": getattr(block, "id", ""),
+            "name": getattr(block, "name", ""),
+            "input": getattr(block, "input", {}) or {},
+        }
+    return {"type": str(t), "raw": str(block)}
+
+
+def _safe_json(obj: Any) -> str:
+    try:
+        return json.dumps(obj, default=str)[:12000]  # cap size for context
+    except Exception:  # noqa: BLE001
+        return json.dumps({"repr": str(obj)[:4000]})
 
 
 def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
