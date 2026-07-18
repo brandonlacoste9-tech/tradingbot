@@ -1,8 +1,30 @@
 """Manual paper ticket API — /proposals/create + control plane."""
 
+import os
+
+import pytest
 from fastapi.testclient import TestClient
 
+# Force Canada-safe paper sim for this module (ignore local IBKR .env)
+os.environ["BROKER_BACKEND"] = "sim"
+os.environ["AUTH_MODE"] = "disabled"
+os.environ["PAPER_ONLY"] = "true"
+
+from app.brokers.factory import reset_broker_cache
+from app.config import get_settings
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _paper_sim_env():
+    os.environ["BROKER_BACKEND"] = "sim"
+    os.environ["AUTH_MODE"] = "disabled"
+    os.environ["PAPER_ONLY"] = "true"
+    get_settings.cache_clear()
+    reset_broker_cache()
+    yield
+    get_settings.cache_clear()
+    reset_broker_cache()
 
 
 def test_manual_ticket_awaits_confirm_then_fills():
