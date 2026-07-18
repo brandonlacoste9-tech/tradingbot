@@ -8,6 +8,7 @@ import {
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import ClerkTokenSync from "@/components/ClerkTokenSync";
+import { IndieTradesLogo } from "@/components/indie-trades-logo";
 import ThemeToggle from "@/components/ThemeToggle";
 import "./globals.css";
 
@@ -46,18 +47,12 @@ function AuthChrome() {
   return (
     <header className="relative z-50 flex h-14 items-center justify-between border-b border-line/80 bg-panel/70 px-4 backdrop-blur-xl sm:h-16 sm:px-6">
       <div className="flex items-center gap-3 sm:gap-6">
-        <a href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10">
-            <span className="font-mono text-sm font-bold text-accent">IT</span>
-          </div>
-          <div className="hidden sm:block">
-            <div className="text-sm font-semibold tracking-wide text-white">
-              IndieTrades
-            </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/60">
-              paper desk
-            </div>
-          </div>
+        <a
+          href="/"
+          className="flex items-center transition hover:opacity-90"
+          aria-label="IndieTrades home"
+        >
+          <IndieTradesLogo size={36} withWordmark />
         </a>
         <nav className="flex items-center gap-1 sm:gap-2">
           <a
