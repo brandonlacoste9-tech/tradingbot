@@ -194,9 +194,10 @@ function HomePageBody({
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
+      <div className="mx-auto max-w-7xl space-y-3 px-4 py-4 sm:px-6">
+        {/* Soft trim: slim pipeline + Why-paper collapsed for signed-in users */}
         <HowItWorks />
-        <WhyPaper />
+        <WhyPaper defaultOpen={!signedIn} />
 
         <div className="grid gap-4 lg:grid-cols-12">
           <section className="min-h-[560px] lg:col-span-7 lg:h-[calc(100vh-12rem)]">
