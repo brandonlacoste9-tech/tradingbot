@@ -9,6 +9,7 @@ import {
 import { Geist, Geist_Mono } from "next/font/google";
 import ClerkTokenSync from "@/components/ClerkTokenSync";
 import { IndieTradesLogo } from "@/components/indie-trades-logo";
+import ProductionBanner from "@/components/production-banner";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   DEFAULT_DESCRIPTION,
@@ -202,6 +203,7 @@ export default function RootLayout({
           }}
         >
           <ClerkTokenSync />
+          <ProductionBanner />
           <AuthChrome />
           {children}
         </ClerkProvider>

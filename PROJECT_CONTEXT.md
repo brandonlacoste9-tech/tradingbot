@@ -5,7 +5,7 @@
 **Repo:** https://github.com/brandonlacoste9-tech/tradingbot  
 **Local path:** `C:\Users\north\tradingbot`  
 **Team brief:** **[docs/TEAM_HANDOFF.md](./docs/TEAM_HANDOFF.md)** — what shipped, env map, next priorities  
-**Owner confirmed:** Clerk auth is **live**
+**Owner confirmed:** Clerk auth is **live** (often still `pk_test_` — swap to production before paid ads; see `docs/PRODUCTION_HARDINESS.md`)
 
 ---
 

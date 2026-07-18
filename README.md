@@ -74,6 +74,7 @@ PUBLIC_HEALTH_VERBOSE=false
 | `docs/PR1_AUTH_TENANCY.md` | Auth |
 | `docs/PR2_POSTGRES.md` | Persistence |
 | `docs/PR3_STRIPE.md` / `STRIPE_RUNBOOK.md` | Billing |
+| `docs/PRODUCTION_HARDINESS.md` | **Clerk prod + Stripe E2E go-live** |
 | `docs/PR4_QUOTAS_KILL_SWITCH.md` | Quotas / admin |
 | `docs/MASSIVE_MARKET_DATA.md` | Market data |
 | `docs/IBKR_SETUP.md` | Owner IBKR paper |

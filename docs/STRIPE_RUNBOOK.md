@@ -1,6 +1,10 @@
-# Stripe end-to-end runbook (P1)
+# Stripe end-to-end runbook
 
-PR3 code is shipped. This is env + Dashboard + verification only.
+PR3 code is shipped. This is env + Dashboard + **one successful Checkout loop**.
+
+Full go-live checklist (Clerk + Stripe): **[PRODUCTION_HARDINESS.md](./PRODUCTION_HARDINESS.md)**
+
+---
 
 ## 1. Stripe Dashboard
 
@@ -8,57 +12,60 @@ PR3 code is shipped. This is env + Dashboard + verification only.
 
 | Plan | Product | Price ID | Env |
 |------|---------|----------|-----|
-| Pro $29/mo | `prod_UuOr5XTY4bkMWP` | `price_1Tua3nCzqBvMqSYFpymfph1u` | **`STRIPE_PRICE_ID_PRO`** (Checkout `plan=pro`) |
-| Pro+ $59/mo | `prod_UuOrg6uejcujT8` | `price_1Tua3oCzqBvMqSYFgbmKQo5G` | **`STRIPE_PRICE_ID_PRO_PLUS`** (Checkout `plan=pro_plus`) |
+| Pro $29/mo | `prod_UuOr5XTY4bkMWP` | `price_1Tua3nCzqBvMqSYFpymfph1u` | **`STRIPE_PRICE_ID_PRO`** |
+| Pro+ $59/mo | `prod_UuOrg6uejcujT8` | `price_1Tua3oCzqBvMqSYFgbmKQo5G` | **`STRIPE_PRICE_ID_PRO_PLUS`** |
 
-1. ~~Create Pro price~~ done — use Pro price above.
-2. **Developers → API keys** → Secret key on Render (`sk_live_...` set).
-3. **Developers → Webhooks → Add/edit endpoint**
-   - **Must hit the FastAPI backend**, not the Next.js site:
-     - ✅ `https://tradingbot-api-0990.onrender.com/billing/webhook`
-     - ❌ `https://www.indietrades.com/api/stripe/webhook` (no such Next route)
-   - Events (minimum):
-     - `checkout.session.completed`
-     - `customer.subscription.created`
-     - `customer.subscription.updated`
-     - `customer.subscription.deleted`
-   - Optional (logged/ignored unless you add handlers): `invoice.payment_succeeded`, `invoice.payment_failed`
-   - Copy **Signing secret** → `STRIPE_WEBHOOK_SECRET` on **Render** (`whsec_...`)
-4. **Settings → Billing → Customer portal** → enable cancel / update payment method.
+1. **Developers → API keys** → `STRIPE_SECRET_KEY` on Render (`sk_test_` first, then `sk_live_`).
+2. **Developers → Webhooks → endpoint**
+   - ✅ `https://tradingbot-api-0990.onrender.com/billing/webhook`
+   - ❌ Not the Next.js site
+   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+   - Signing secret → `STRIPE_WEBHOOK_SECRET`
+3. **Settings → Billing → Customer portal** → enable cancel / update payment.
+
+---
 
 ## 2. Render env (`tradingbot-api`)
 
 ```env
-STRIPE_SECRET_KEY=sk_test_...
+STRIPE_SECRET_KEY=sk_test_...   # or sk_live_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_ID_PRO=price_...
-STRIPE_SUCCESS_URL=https://hilarious-piroshki-08d173.netlify.app/?billing=success
-STRIPE_CANCEL_URL=https://hilarious-piroshki-08d173.netlify.app/?billing=cancel
-# leave STRIPE_DEV_MODE unset/false in prod
+STRIPE_PRICE_ID_PRO=price_1Tua3nCzqBvMqSYFpymfph1u
+STRIPE_PRICE_ID_PRO_PLUS=price_1Tua3oCzqBvMqSYFgbmKQo5G
+STRIPE_SUCCESS_URL=https://indietrades.com/plans?billing=success
+STRIPE_CANCEL_URL=https://indietrades.com/plans?billing=cancel
+# STRIPE_DEV_MODE=  (unset/false in production)
 ```
 
-Redeploy API. Confirm `GET /health` includes `"stripe_configured": true` (if exposed) or `/billing/status` → `stripe_configured: true`.
+UI Checkout also passes `window.location.origin` success/cancel so local/dev stays correct.
 
-## 3. Verify
+Confirm via signed-in:
 
 ```bash
-# As a signed-in Clerk user (Bearer token) or temporarily AUTH_MODE=disabled + X-User-Id:
-
-curl -s -H "Authorization: Bearer $TOKEN" \
+curl -s -H "Authorization: Bearer $CLERK_JWT" \
   https://tradingbot-api-0990.onrender.com/billing/status
-
-# Expect plan=free, limits.chat_per_day, stripe_configured=true
-
-# From UI: Billing panel → Upgrade to Pro → complete Checkout test card 4242...
-# Webhook should set plan=pro
-
-# Portal: Manage subscription opens Stripe portal
+# stripe_configured: true
 ```
 
-Chat cap: free hits 429 after free daily limit; Pro after webhook should allow more.
+---
+
+## 3. One E2E run
+
+1. Sign in on https://indietrades.com  
+2. https://indietrades.com/plans → plan **FREE**  
+3. Upgrade to **Indie Pro** (or Pro+)  
+4. Pay with test card `4242…` (test mode) or real card (live)  
+5. Return `?billing=success` → plan chip **PRO** / **PRO_PLUS**  
+6. **Manage billing** → Customer Portal  
+7. Stripe webhook delivery **200** for `checkout.session.completed`
+
+If plan stays free: re-sync **webhook signing secret** for the Render URL.
+
+---
 
 ## 4. Hard rules
 
-- Never commit Stripe secrets.
-- Test mode first; swap to live keys only when ready to charge.
-- Control plane unchanged (policy + confirm still required).
+- Never commit Stripe secrets  
+- Test mode first; live keys only when ready to charge  
+- Control plane unchanged (policy + confirm still required)  
+- Webhook hits **API**, not Netlify  

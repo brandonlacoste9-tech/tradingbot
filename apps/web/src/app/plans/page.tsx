@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BillingReturnBanner from "@/components/billing-return-banner";
 import PlanCheckout from "@/components/PlanCheckout";
 
 export const metadata: Metadata = {
@@ -107,6 +108,7 @@ const FAQ: { q: string; a: string }[] = [
 export default function PlansPage() {
   return (
     <main className="relative flex-1 pb-16">
+      <BillingReturnBanner />
       <section className="border-b border-line/70 bg-panel/30">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <p className="hud-label mb-3">pricing</p>
