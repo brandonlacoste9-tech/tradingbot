@@ -113,6 +113,35 @@ cd apps/api
 pytest -q
 ```
 
+## Deploy (Netlify — frontend only)
+
+Netlify hosts the **web UI** (`apps/web`). It does **not** run the FastAPI backend.
+
+### Netlify settings (or use root `netlify.toml`)
+
+| Setting | Value |
+|---------|--------|
+| Base directory | `apps/web` |
+| Build command | `npm run build` |
+| Publish directory | `apps/web/out` (with base set, `out`) |
+| Node | 20 |
+
+### Environment variables (Netlify UI → Site config → Environment)
+
+```
+NEXT_PUBLIC_API_URL=https://YOUR-API-HOST
+```
+
+Without this, the UI loads but shows **API down** (it expects `http://localhost:8000` only in local dev).
+
+### Why you saw “Page not found”
+
+Deploying from the **repo root** publishes nothing useful (no `index.html`). The app must build from `apps/web` with publish dir `out` (static export).
+
+### Backend
+
+Run FastAPI separately (local, Railway, Render, Fly.io, etc.) and set `NEXT_PUBLIC_API_URL` + CORS on the API to your Netlify domain.
+
 ## Next moves
 
 - Wire real LLM tool-calling into `agent/loop.py` using `tools/schemas.py`

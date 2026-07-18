@@ -1,0 +1,16 @@
+# Monorepo: Next.js app lives in apps/web
+# Netlify Site settings should match this file (or leave blank and use this).
+
+[build]
+  base = "apps/web"
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA-style fallback (static export already emits index.html for /)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
