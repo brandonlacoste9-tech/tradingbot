@@ -36,8 +36,31 @@ async def init_pool() -> bool:
 
     # asyncpg wants postgresql:// not postgres:// sometimes both work
     dsn = url.replace("postgres://", "postgresql://", 1)
+    # Render / Neon external hosts require TLS; asyncpg ignores libpq sslmode=
+    # in the URL — pass ssl explicitly when the host is remote.
+    ssl_ctx: Any = None
+    lower = dsn.lower()
+    if (
+        "sslmode=require" in lower
+        or "ssl=true" in lower
+        or "render.com" in lower
+        or "neon.tech" in lower
+        or "amazonaws.com" in lower
+    ):
+        import ssl as _ssl
+
+        ssl_ctx = _ssl.create_default_context()
+    # Strip query params asyncpg may not understand
+    if "?" in dsn:
+        dsn = dsn.split("?", 1)[0]
     try:
-        _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5, command_timeout=30)
+        _pool = await asyncpg.create_pool(
+            dsn,
+            min_size=1,
+            max_size=5,
+            command_timeout=30,
+            ssl=ssl_ctx,
+        )
         base = Path(__file__).resolve().parents[2]
         async with _pool.acquire() as conn:
             for name in ("schema_pr2.sql", "schema_pr3.sql"):
