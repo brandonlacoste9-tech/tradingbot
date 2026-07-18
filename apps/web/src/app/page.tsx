@@ -84,7 +84,7 @@ export default function HomePage() {
         setConn(c);
         await refresh();
       } catch {
-        /* user can click refresh */
+        /* user can sync */
       }
       setLoading(false);
     })();
@@ -106,20 +106,21 @@ export default function HomePage() {
   const bp = conn?.buying_power || account?.buying_power;
 
   return (
-    <main className="min-h-screen pb-8">
+    <main className="relative min-h-screen pb-10">
       <DisclaimerBanner />
 
-      <header className="sticky top-0 z-40 border-b border-line bg-panel/90 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl space-y-3 px-4 py-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="border-b border-line/70 bg-panel/40 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-white">
+              <p className="hud-label mb-1">Command bridge</p>
+              <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
                 IndieTrades
               </h1>
-              <p className="text-xs text-slate-500">
-                indietrades.com · paper · research → policy → confirm
+              <p className="mt-1 max-w-md text-sm text-mist">
+                indietrades.com · research → policy → confirm · paper fills only
               </p>
-              <div className="mt-2">
+              <div className="mt-3">
                 <UserBar />
               </div>
             </div>
@@ -134,23 +135,27 @@ export default function HomePage() {
             />
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-5">
+      <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
         <HowItWorks />
 
         <div className="grid gap-4 lg:grid-cols-12">
-          <section className="min-h-[560px] lg:col-span-7 lg:h-[calc(100vh-14rem)]">
+          <section className="min-h-[560px] lg:col-span-7 lg:h-[calc(100vh-12rem)]">
             <Chat
               onProposalSubmitted={() => void refresh()}
               onActivity={() => void refresh()}
             />
           </section>
 
-          <aside className="flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-14rem)] lg:overflow-y-auto lg:pr-1">
-            <Panel title="Portfolio" badge={loading ? "loading…" : undefined}>
+          <aside className="flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
+            <Panel
+              title="Portfolio telemetry"
+              label="book"
+              badge={loading ? "…" : "SIM"}
+            >
               {connError && (
-                <p className="mb-2 text-sm text-bad">{connError}</p>
+                <p className="mb-2 font-mono text-sm text-bad">{connError}</p>
               )}
               {loading && !equity ? (
                 <SkeletonStats />
@@ -161,7 +166,7 @@ export default function HomePage() {
                   <Stat label="Buying power" value={fmtMoney(bp)} />
                 </div>
               )}
-              <dl className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
+              <dl className="mt-3 space-y-1.5 border-t border-line/70 pt-3 font-mono text-xs">
                 <KV k="Account" v={conn?.account_id || account?.id || "—"} />
                 <KV k="Backend" v={conn?.backend || portfolioSource} />
                 <KV k="Paper" v={conn?.is_paper === false ? "no" : "yes"} />
@@ -178,6 +183,7 @@ export default function HomePage() {
 
             <Panel
               title="Positions"
+              label="holdings"
               badge={
                 positions.length > 0 ? String(positions.length) : undefined
               }
@@ -185,18 +191,20 @@ export default function HomePage() {
               {positions.length === 0 ? (
                 <Empty
                   title="No open positions"
-                  body="Research a symbol in chat, propose a limit order, then confirm in the preflight modal."
+                  body="Research a symbol, propose a limit, then confirm preflight."
                 />
               ) : (
                 <div className="max-h-44 space-y-2 overflow-y-auto">
                   {positions.map((p) => (
                     <div
                       key={p.symbol}
-                      className="flex items-center justify-between rounded-lg border border-line/80 bg-ink/40 px-3 py-2 text-sm"
+                      className="flex items-center justify-between rounded-xl border border-line/80 bg-ink/50 px-3 py-2.5 text-sm transition hover:border-accent/25"
                     >
                       <div>
-                        <div className="font-medium text-white">{p.symbol}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="font-semibold tracking-wide text-white">
+                          {p.symbol}
+                        </div>
+                        <div className="font-mono text-[11px] text-mist">
                           qty {p.qty}
                           {p.avg_entry_price
                             ? ` · avg ${p.avg_entry_price}`
@@ -223,23 +231,25 @@ export default function HomePage() {
               )}
             </Panel>
 
-            <Panel title="Journal">
+            <Panel title="Journal" label="audit">
               {journal.length === 0 ? (
                 <Empty
-                  title="Journal is empty"
-                  body="Holds, proposals, and fills show up here as an audit trail."
+                  title="Journal empty"
+                  body="Holds, proposals, and fills form the ship log."
                 />
               ) : (
                 <div className="max-h-52 space-y-2 overflow-y-auto">
                   {journal.map((e) => (
                     <article
                       key={e.id}
-                      className="rounded-lg border border-line/80 bg-ink/40 px-3 py-2 text-sm text-slate-300"
+                      className="rounded-xl border border-line/80 bg-ink/50 px-3 py-2 text-sm text-slate-300"
                     >
-                      <div className="text-[10px] text-slate-500">
+                      <div className="font-mono text-[10px] text-accent/50">
                         {new Date(e.created_at).toLocaleString()}
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap">{e.summary_md}</p>
+                      <p className="mt-1 whitespace-pre-wrap leading-relaxed">
+                        {e.summary_md}
+                      </p>
                     </article>
                   ))}
                 </div>
@@ -248,23 +258,30 @@ export default function HomePage() {
 
             <BillingPanel />
 
-            <Panel title="Safety rails">
-              <ul className="list-disc space-y-1.5 pl-4 text-xs leading-relaxed text-slate-400">
-                <li>Paper-only by construction (sim / IBKR paper)</li>
-                <li>Grok researches; policy engine is pure code</li>
-                <li>Confirm TTL before any order reaches the book</li>
-                <li>Idempotent client_order_id on every submit</li>
-                <li>Free plan daily chat cap; Pro via Stripe when configured</li>
+            <Panel title="Safety rails" label="policy">
+              <ul className="space-y-2 text-xs leading-relaxed text-mist">
+                {[
+                  "Paper-only by construction (sim / IBKR paper)",
+                  "Grok researches; policy engine is pure code",
+                  "Confirm TTL before any order reaches the book",
+                  "Idempotent client_order_id on every submit",
+                  "Free chat cap; Pro via Stripe when configured",
+                ].map((t) => (
+                  <li key={t} className="flex gap-2">
+                    <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent/60" />
+                    <span>{t}</span>
+                  </li>
+                ))}
               </ul>
             </Panel>
           </aside>
         </div>
       </div>
 
-      <footer className="border-t border-line py-4 text-center text-[11px] text-slate-600">
-        IndieTrades · indietrades.com · Educational paper trading. Not investment
-        advice. Not a broker.{" "}
-        {healthInfo?.version ? `API v${healthInfo.version}` : ""}
+      <footer className="border-t border-line/60 py-5 text-center font-mono text-[11px] text-slate-600">
+        IndieTrades · indietrades.com · shipboard paper desk · not investment
+        advice · not a broker
+        {healthInfo?.version ? ` · API v${healthInfo.version}` : ""}
       </footer>
     </main>
   );
@@ -285,11 +302,9 @@ function fmtMoney(v: string | undefined | null): string {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-line bg-ink/50 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">
-        {label}
-      </div>
-      <div className="mt-0.5 font-mono text-sm font-medium text-white">
+    <div className="hud-stat">
+      <div className="hud-label !text-[9px]">{label}</div>
+      <div className="mt-1 font-mono text-sm font-semibold tabular-nums text-white">
         {value}
       </div>
     </div>
@@ -311,28 +326,33 @@ function SkeletonStats() {
 
 function Empty({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-line bg-ink/30 px-3 py-4 text-center">
+    <div className="rounded-xl border border-dashed border-line-bright/40 bg-ink/40 px-3 py-5 text-center">
       <p className="text-sm font-medium text-slate-300">{title}</p>
-      <p className="mt-1 text-xs leading-relaxed text-slate-500">{body}</p>
+      <p className="mt-1 text-xs leading-relaxed text-mist">{body}</p>
     </div>
   );
 }
 
 function Panel({
   title,
+  label,
   badge,
   children,
 }: {
   title: string;
+  label?: string;
   badge?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-panel p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
+    <div className="hud-panel">
+      <div className="hud-panel-header">
+        <div>
+          {label && <div className="hud-label mb-0.5">{label}</div>}
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+        </div>
         {badge && (
-          <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[10px] text-slate-500">
+          <span className="rounded-full border border-accent/25 bg-accent/5 px-2 py-0.5 font-mono text-[10px] text-accent">
             {badge}
           </span>
         )}
@@ -345,8 +365,8 @@ function Panel({
 function KV({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-slate-500">{k}</dt>
-      <dd className="max-w-[60%] truncate font-mono text-slate-200">{v}</dd>
+      <dt className="text-mist">{k}</dt>
+      <dd className="max-w-[60%] truncate text-slate-200">{v}</dd>
     </div>
   );
 }

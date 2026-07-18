@@ -72,8 +72,8 @@ export default function Chat({
       id: "welcome",
       role: "system",
       text:
-        "Paper research desk. Try a quick action below, or type freely. " +
-        "Orders never submit until you confirm in the preflight modal.",
+        "Shipboard online. Quick actions below, or type freely. " +
+        "Orders never leave the paper book until you confirm preflight.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -135,29 +135,30 @@ export default function Chat({
   );
 
   return (
-    <div className="flex h-full min-h-[480px] flex-col rounded-2xl border border-line bg-panel shadow-lg shadow-black/20">
-      <div className="border-b border-line px-4 py-3">
+    <div className="hud-panel flex h-full min-h-[480px] flex-col !p-0 overflow-hidden">
+      <div className="border-b border-line/80 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="font-semibold text-white">Agent chat</h2>
-            <p className="text-xs text-slate-500">
+            <div className="hud-label">Comms</div>
+            <h2 className="text-base font-semibold text-white">Agent channel</h2>
+            <p className="text-xs text-mist">
               Research · propose · confirm · paper only
             </p>
           </div>
           {busy && (
-            <span className="animate-pulse rounded-full border border-accent/40 px-2 py-0.5 text-[10px] text-accent">
-              thinking…
+            <span className="animate-pulse rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 font-mono text-[10px] text-accent">
+              SCANNING…
             </span>
           )}
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           {QUICK.map((q) => (
             <button
               key={q}
               type="button"
               disabled={busy}
               onClick={() => void sendText(q)}
-              className="rounded-full border border-line bg-ink/60 px-2.5 py-1 text-[11px] text-slate-300 hover:border-accent/50 hover:text-white disabled:opacity-40"
+              className="rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[11px] text-slate-300 transition hover:border-accent/50 hover:text-accent disabled:opacity-40"
             >
               {q}
             </button>
@@ -171,10 +172,10 @@ export default function Chat({
             key={m.id}
             className={`max-w-[92%] rounded-xl px-3 py-2 text-sm ${
               m.role === "user"
-                ? "ml-auto bg-accent/20 text-slate-100"
+                ? "ml-auto border border-accent/25 bg-accent/15 text-cyan-50 shadow-glow-sm"
                 : m.role === "system"
-                  ? "border border-line bg-ink/50 text-slate-400"
-                  : "bg-ink text-slate-200"
+                  ? "border border-line bg-ink/60 font-mono text-xs text-mist"
+                  : "border border-line/60 bg-ink/80 text-slate-200"
             }`}
           >
             {(m.mode || m.model) && (
@@ -227,7 +228,7 @@ export default function Chat({
         )}
       </div>
 
-      <div className="border-t border-line p-3">
+      <div className="border-t border-line/80 bg-panel-2/40 p-3">
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -238,14 +239,14 @@ export default function Chat({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask for a quote, research, or a paper proposal…"
-            className="flex-1 rounded-xl border border-line bg-ink px-3 py-2.5 text-sm text-white outline-none ring-accent placeholder:text-slate-600 focus:ring-1"
+            placeholder="Transmit: quote, research, or paper proposal…"
+            className="flex-1 rounded-xl border border-line bg-ink/90 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-accent/50 focus:shadow-glow-sm"
             disabled={busy}
           />
           <button
             type="submit"
             disabled={busy || !input.trim()}
-            className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+            className="hud-btn-primary disabled:opacity-40"
           >
             {busy ? "…" : "Send"}
           </button>

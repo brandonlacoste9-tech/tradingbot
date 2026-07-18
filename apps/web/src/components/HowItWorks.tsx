@@ -1,31 +1,37 @@
 "use client";
 
 const STEPS = [
-  { n: "1", t: "Research", d: "Ask Grok to search, quote, or check your book" },
-  { n: "2", t: "Propose", d: "Agent proposes a limit order with a thesis" },
-  { n: "3", t: "Policy", d: "Risk rules run in code — never skipped" },
-  { n: "4", t: "Confirm", d: "You approve within the TTL (paper only)" },
+  { n: "01", t: "Research", d: "Grok searches, quotes, and reads the book" },
+  { n: "02", t: "Propose", d: "Limit order + thesis lands on the board" },
+  { n: "03", t: "Policy", d: "Hard risk rules — never in the prompt" },
+  { n: "04", t: "Confirm", d: "You approve inside the TTL (paper only)" },
 ];
 
 export default function HowItWorks() {
   return (
-    <div className="rounded-2xl border border-line bg-panel/60 p-3">
-      <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
-        How this desk works
+    <div className="hud-panel !py-3">
+      <div className="hud-panel-header !mb-2 !border-0 !pb-0">
+        <span className="hud-label">Bridge pipeline</span>
+        <span className="font-mono text-[10px] text-mist">control plane</span>
       </div>
       <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {STEPS.map((s) => (
+        {STEPS.map((s, i) => (
           <li
             key={s.n}
-            className="flex gap-2 rounded-xl border border-line/80 bg-ink/40 px-3 py-2"
+            className="group relative flex gap-3 overflow-hidden rounded-xl border border-line/80 bg-ink/50 px-3 py-2.5 transition hover:border-accent/30 hover:shadow-glow-sm"
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/20 font-mono text-xs text-accent">
+            <span className="font-mono text-lg font-semibold tabular-nums text-accent/80">
               {s.n}
             </span>
-            <div>
+            <div className="min-w-0">
               <div className="text-xs font-semibold text-white">{s.t}</div>
-              <div className="text-[11px] leading-snug text-slate-500">{s.d}</div>
+              <div className="text-[11px] leading-snug text-mist">{s.d}</div>
             </div>
+            {i < STEPS.length - 1 && (
+              <span className="pointer-events-none absolute -right-1 top-1/2 hidden -translate-y-1/2 text-accent/20 lg:block">
+                →
+              </span>
+            )}
           </li>
         ))}
       </ol>

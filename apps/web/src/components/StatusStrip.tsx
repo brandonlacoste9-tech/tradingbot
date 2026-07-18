@@ -38,74 +38,65 @@ export default function StatusStrip({
   const circuit = health?.llm_circuit || "closed";
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {chatBlocked && (
-        <div className="rounded-xl border border-bad/40 bg-bad/10 px-3 py-2 text-xs text-bad">
-          Service paused
-          {blockReason ? `: ${blockReason}` : ""}. Chat and confirms are blocked.
+        <div className="rounded-xl border border-bad/40 bg-bad/10 px-3 py-2 font-mono text-xs text-bad">
+          SERVICE PAUSED
+          {blockReason ? `: ${blockReason}` : ""}
         </div>
       )}
       {health?.global_kill && !chatBlocked && (
-        <div className="rounded-xl border border-bad/40 bg-bad/10 px-3 py-2 text-xs text-bad">
-          Global kill switch is active on the API.
+        <div className="rounded-xl border border-bad/40 bg-bad/10 px-3 py-2 font-mono text-xs text-bad">
+          KILL SWITCH ACTIVE
         </div>
       )}
       {circuit !== "closed" && (
         <div className="rounded-xl border border-warn/40 bg-warn/10 px-3 py-2 text-xs text-warn">
-          LLM circuit: <span className="font-mono">{circuit}</span> — demo agent
-          may answer until the provider recovers.
+          LLM circuit <span className="font-mono">{circuit}</span> — demo may
+          answer until recovery
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Pill
           ok={apiOk}
-          label={apiOk == null ? "API…" : apiOk ? "API up" : "API down"}
+          label={apiOk == null ? "API…" : apiOk ? "API UP" : "API DOWN"}
         />
-        <Chip
-          label={`broker: ${health?.broker_backend || "…"}`}
-          tone="accent"
-        />
+        <Chip label={`BRK ${health?.broker_backend || "…"}`} tone="accent" />
         <Chip
           label={
             health?.llm_enabled
-              ? `llm: ${health.llm_provider || "on"}`
-              : "llm: demo"
+              ? `LLM ${(health.llm_provider || "on").toUpperCase()}`
+              : "LLM DEMO"
           }
           tone={health?.llm_enabled ? "good" : "muted"}
         />
         <Chip
-          label={health?.paper_only ? "paper only" : "live risk"}
+          label={health?.paper_only ? "PAPER" : "LIVE RISK"}
           tone={health?.paper_only ? "good" : "warn"}
         />
-        {primary && (
-          <Chip label={`data: ${primary}`} tone="muted" />
-        )}
-        {plan && <Chip label={`plan: ${plan}`} tone="accent" />}
+        {primary && <Chip label={`DATA ${primary}`} tone="muted" />}
+        {plan && <Chip label={`PLAN ${plan.toUpperCase()}`} tone="accent" />}
         {onRefresh && (
-          <button
-            type="button"
-            onClick={onRefresh}
-            className="rounded-lg border border-line bg-ink px-3 py-1.5 text-xs text-slate-200 hover:border-accent"
-          >
-            Refresh paper
+          <button type="button" onClick={onRefresh} className="hud-btn">
+            Sync book
           </button>
         )}
       </div>
 
       {pct != null && used != null && limit != null && (
-        <div className="max-w-md">
-          <div className="mb-1 flex justify-between text-[11px] text-slate-400">
-            <span>Chats today</span>
-            <span className="font-mono text-slate-200">
-              {used} / {limit}
+        <div className="min-w-[200px] max-w-sm">
+          <div className="mb-1 flex justify-between font-mono text-[10px] uppercase tracking-wider text-mist">
+            <span>Comms quota</span>
+            <span className="text-slate-200">
+              {used}/{limit}
               {usage?.remaining != null ? ` · ${usage.remaining} left` : ""}
             </span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-ink">
+          <div className="h-1 overflow-hidden rounded-full bg-ink ring-1 ring-line">
             <div
               className={`h-full rounded-full transition-all ${
-                pct >= 90 ? "bg-bad" : pct >= 70 ? "bg-warn" : "bg-accent"
+                pct >= 90 ? "bg-bad" : pct >= 70 ? "bg-warn" : "bg-accent shadow-glow-sm"
               }`}
               style={{ width: `${pct}%` }}
             />
@@ -117,10 +108,10 @@ export default function StatusStrip({
 }
 
 function Pill({ ok, label }: { ok: boolean | null; label: string }) {
-  const color = ok == null ? "bg-slate-600" : ok ? "bg-good" : "bg-bad";
+  const color = ok == null ? "bg-slate-500" : ok ? "bg-good" : "bg-bad";
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs text-slate-300">
-      <span className={`h-2 w-2 rounded-full ${color}`} />
+    <span className="hud-chip">
+      <span className={`h-1.5 w-1.5 rounded-full ${color} ${ok ? "animate-pulse" : ""}`} />
       {label}
     </span>
   );
@@ -135,17 +126,13 @@ function Chip({
 }) {
   const cls =
     tone === "good"
-      ? "border-good/40 text-good"
+      ? "border-good/35 text-good"
       : tone === "warn"
-        ? "border-warn/40 text-warn"
+        ? "border-warn/35 text-warn"
         : tone === "accent"
-          ? "border-accent/40 text-accent"
-          : "border-line text-slate-400";
+          ? "border-accent/35 text-accent"
+          : "border-line text-mist";
   return (
-    <span
-      className={`inline-flex rounded-full border px-2.5 py-1 font-mono text-[11px] ${cls}`}
-    >
-      {label}
-    </span>
+    <span className={`hud-chip ${cls}`}>{label}</span>
   );
 }

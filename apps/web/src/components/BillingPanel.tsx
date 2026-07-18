@@ -104,8 +104,11 @@ export default function BillingPanel() {
       : null;
 
   return (
-    <div className="rounded-2xl border border-line bg-panel p-4">
-      <h3 className="mb-3 text-sm font-semibold text-white">Billing & usage</h3>
+    <div className="hud-panel">
+      <div className="hud-panel-header">
+        <h3 className="text-sm font-semibold text-white">Billing & usage</h3>
+        <span className="hud-label !normal-case !tracking-normal">plans</span>
+      </div>
       {error && <p className="mb-2 text-xs text-bad">{error}</p>}
       {chatBlocked && (
         <p className="mb-2 rounded-lg border border-bad/40 bg-bad/10 px-2 py-1.5 text-xs text-bad">
