@@ -326,7 +326,7 @@ function SkeletonStats() {
 
 function Empty({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-line-bright/40 bg-ink/40 px-3 py-5 text-center">
+    <div className="rounded-xl border border-dashed border-line bg-ink/40 px-3 py-5 text-center">
       <p className="text-sm font-medium text-slate-300">{title}</p>
       <p className="mt-1 text-xs leading-relaxed text-mist">{body}</p>
     </div>

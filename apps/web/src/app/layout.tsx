@@ -32,7 +32,7 @@ function AuthChrome() {
   return (
     <header className="relative z-50 flex h-14 items-center justify-between border-b border-line/80 bg-panel/70 px-4 backdrop-blur-xl sm:h-16 sm:px-6">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10 shadow-glow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-accent/30 bg-accent/10">
           <span className="font-mono text-sm font-bold text-accent">IT</span>
         </div>
         <div className="hidden sm:block">
@@ -53,7 +53,7 @@ function AuthChrome() {
           <SignInButton mode="modal">
             <button
               type="button"
-              className="cursor-pointer rounded-full border border-line-bright/50 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-accent/50 hover:text-white"
+              className="cursor-pointer rounded-full border border-line px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-accent/50 hover:text-white"
             >
               Sign in
             </button>

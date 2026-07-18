@@ -96,7 +96,7 @@ export default function StatusStrip({
           <div className="h-1 overflow-hidden rounded-full bg-ink ring-1 ring-line">
             <div
               className={`h-full rounded-full transition-all ${
-                pct >= 90 ? "bg-bad" : pct >= 70 ? "bg-warn" : "bg-accent shadow-glow-sm"
+                pct >= 90 ? "bg-bad" : pct >= 70 ? "bg-warn" : "bg-accent"
               }`}
               style={{ width: `${pct}%` }}
             />

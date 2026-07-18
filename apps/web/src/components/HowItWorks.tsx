@@ -18,7 +18,7 @@ export default function HowItWorks() {
         {STEPS.map((s, i) => (
           <li
             key={s.n}
-            className="group relative flex gap-3 overflow-hidden rounded-xl border border-line/80 bg-ink/50 px-3 py-2.5 transition hover:border-accent/30 hover:shadow-glow-sm"
+            className="group relative flex gap-3 overflow-hidden rounded-xl border border-line/80 bg-ink/50 px-3 py-2.5 transition hover:border-accent/30"
           >
             <span className="font-mono text-lg font-semibold tabular-nums text-accent/80">
               {s.n}

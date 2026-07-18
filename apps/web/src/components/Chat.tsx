@@ -172,7 +172,7 @@ export default function Chat({
             key={m.id}
             className={`max-w-[92%] rounded-xl px-3 py-2 text-sm ${
               m.role === "user"
-                ? "ml-auto border border-accent/25 bg-accent/15 text-cyan-50 shadow-glow-sm"
+                ? "ml-auto border border-accent/25 bg-accent/15 text-cyan-50"
                 : m.role === "system"
                   ? "border border-line bg-ink/60 font-mono text-xs text-mist"
                   : "border border-line/60 bg-ink/80 text-slate-200"
@@ -228,7 +228,7 @@ export default function Chat({
         )}
       </div>
 
-      <div className="border-t border-line/80 bg-panel-2/40 p-3">
+      <div className="border-t border-line/80 bg-ink/40 p-3">
         <form
           className="flex gap-2"
           onSubmit={(e) => {
@@ -240,7 +240,7 @@ export default function Chat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Transmit: quote, research, or paper proposal…"
-            className="flex-1 rounded-xl border border-line bg-ink/90 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-accent/50 focus:shadow-glow-sm"
+            className="flex-1 rounded-xl border border-line bg-ink/90 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-accent/50"
             disabled={busy}
           />
           <button
