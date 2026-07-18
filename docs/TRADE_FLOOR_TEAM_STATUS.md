@@ -3,7 +3,7 @@
 **Product:** IndieTrades · https://indietrades.com/trade  
 **Audience:** Grok product/eng team (Harper, Lucas, Benjamin + lead)  
 **Date:** 2026-07-18  
-**Status:** Phase 1–2 **shipped** · Owner **locked Phase 3 = C hybrid + freeze** · team confirm on GitHub  
+**Status:** Phase 1–2 **shipped** · Phase 3 **Hybrid C shipped** · freeze held  
 
 **Related plan:** [`TRADE_FLOOR_REALISM_PLAN.md`](./TRADE_FLOOR_REALISM_PLAN.md)  
 **Phase 3 spec:** [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md)  
@@ -12,16 +12,26 @@
 
 ## 1. What we shipped
 
-| Commit | What |
-|--------|------|
-| `9ae7e4e` | Phase 1 chrome + Phase 2 chart |
-| `cb9370c` | Any ticker — watchlist Open + ticket auto-watch |
-
-- Desk chrome: Net liq · RTH · as-of · watchlist · blotter tabs · TIF Day · PAPER  
-- Chart: candles → line fallback · 1D+1M · pure green/red · source/age · no fake bars  
-- Any US ticker via Open / ticket symbol · localStorage watch · × remove  
+| Area | What |
+|------|------|
+| Phase 1 | Desk chrome: Net liq · RTH · as-of · watchlist · blotter tabs · TIF Day · PAPER |
+| Phase 2 | Chart: candles → line fallback · 1D+1M · pure green/red · source/age · no fake bars |
+| Any ticker | Watchlist Open + ticket auto-watch |
+| **Phase 3 Hybrid C** | Aggressive instant fill vs passive working · cancel · Day TIF · evaluate on quotes |
 
 **Control plane unchanged:** research (optional) → policy → human confirm → PaperSim.
+
+### Hybrid C (live model)
+
+| After confirm | Condition | Result |
+|---------------|-----------|--------|
+| **Aggressive** | Buy limit ≥ last/mark · sell ≤ last/mark | Instant PaperSim fill at last/mark → Fills / Positions |
+| **Passive** | Buy < last · sell > last | Working in Orders · cancel · Day TIF · fill when mark crosses |
+
+**API:** hybrid `submit_order` · `evaluate_working_orders` · `POST /orders/{id}/cancel` · `POST /orders/evaluate`  
+**Statuses:** `working` · `filled` · `cancelled` · `expired` (+ policy / confirm path)  
+**UI:** Orders tab + cancel · Fills with “PaperSim · not a live broker” · Tips: How fills work · account disclaimer  
+**Tests:** 13 hybrid/manual/sim green · web tsc clean
 
 ---
 
@@ -33,69 +43,38 @@
 | Honest data badges | Fake Level 2 / invented bars |
 | You confirm every order | LLM auto-submit |
 | Loud PAPER + PaperSim | Silent “live” language |
+| Working vs fill is real | Orders tab as theater |
 
 ---
 
-## 3. Phase 3 vote — owner lock (team: confirm or dissent)
+## 3. Freeze (held)
 
-### 1. Feel pass → **Ship**
+**In (shipped):** working limits · cancel · statuses · documented fill rules · Day TIF  
 
-Ship Phase 1–2 as baseline. Polish only honesty/clarity (as-of, PAPER, source age). Don’t rethink product map — Trade floor is the right **act** surface.
-
-**Notes:** Chart + any-ticker + blotter chrome are enough to look like a desk **if Orders starts meaning something**. That’s the Phase 3 job, not more chrome.
-
-### 2. Fill model → **C Hybrid**
-
-| Why not pure A | Why not pure B first |
-|----------------|----------------------|
-| Instant-only makes Orders theater | Full working-book complexity before users understand the loop |
-| “Instant form → position” undercuts the desk story | Harder to ship, more support surface |
-
-**Hybrid rules:**
-
-- **Aggressive** (limit through last, or market if ever allowed): instant paper fill at last/mark after confirm — first-win **&lt;30s**  
-- **Passive** (buy &lt; last, sell &gt; last): **working** until last trades through, Day TIF expire, or user cancel  
-- Never invent prints, Level 2, or hidden matching  
-
-### 3. Freeze Phase 3 → **Yes**
-
-**In:** working limits · cancel · statuses · documented fill rules · Day TIF only  
-
-**Out:** SL/TP · Level 2 · bid/ask · partials (unless trivial) · multi-leg · live routing  
-
-Statuses table: see [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md) §4  
-(`awaiting_confirm` → `working` / `filled` / `cancelled` / `expired` + `policy_rejected`)
-
-### 4. What still risks “this is real money”
-
-- Any **LIVE** wording without PAPER adjacent (prefer **Quotes · delayed** / market data)  
-- Net liq / BP without **simulated paper account** line  
-- Fill success that looks like broker confirm without **PaperSim / not a broker**  
-- Instant-only with no resting path → users assume exchange matching  
-- Clerk **dev** keys + polished desk (ops trust)  
-- Pro charts without **source/age** (already required — keep it)  
-
-### Lean (locked for implement)
-
-**C, not A.** B’s spirit (working + cancel + statuses), A’s speed for aggressive fills. Document always. No fake tape. Human confirm stays sacred.
+**Out (do not open yet):** SL/TP · Level 2 · bid/ask · partials · multi-leg · live routing · extra TIFs
 
 ---
 
-## 4. How to vote on GitHub
+## 4. Feel-check after deploy
 
-**Issue #1:** https://github.com/brandonlacoste9-tech/tradingbot/issues/1  
+1. **Aggressive:** buy AAPL at mark or higher → confirm → appears in **Fills** / Positions  
+2. **Passive:** buy AAPL below last → confirm → appears in **Orders** → Cancel or wait for mark cross  
+3. Confirm copy never implies live broker match  
 
-(Discussions not enabled on repo — Issue is the vote thread.)
-
-Comment:
-
-- **`C`** — agree with hybrid + freeze  
-- **`A` / `B`** — dissent + one sentence why  
-- Optional polish notes (honesty only)
-
-When team locks **C + freeze**, eng implements **Phase 3 only** — no scope creep.
+Live health (sample): `paper_only: true`, `broker_backend: sim`, product IndieTrades, llm_enabled.
 
 ---
 
-**Previous status:** Awaiting Phase 3 bounce.  
-**Now:** Owner vote recorded; awaiting in-thread confirm.
+## 5. What’s next (team lean)
+
+1. **Feel pass on Hybrid C** in production (aggressive + passive paths)  
+2. Stay frozen on SL/TP / L2 / bid-ask  
+3. Optional honesty polish only (wording, as-of, PAPER adjacency)  
+4. Chart already shipped — if any residual chart gaps, honesty/polish only  
+
+**Not next:** unfreezing Phase 4 scope or live routing.
+
+---
+
+**Previous:** Owner locked C + freeze; implement.  
+**Now:** Hybrid C **shipped**. Freeze held. Feel-check in prod.
