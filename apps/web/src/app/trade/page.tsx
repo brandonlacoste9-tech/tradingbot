@@ -522,17 +522,28 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   }
 
   const budgetChip = useMemo(() => {
+    // Prefer live book start from API (authoritative after budget reset)
     const fromAccount = account?.starting_cash
       ? Number(account.starting_cash)
       : NaN;
     if (Number.isFinite(fromAccount) && fromAccount > 0) {
       return formatBudgetShort(fromAccount);
     }
+    // Fall back to cash when book is flat cash (common after budget)
+    const cashN = account?.cash ? Number(account.cash) : NaN;
+    if (Number.isFinite(cashN) && cashN > 0 && positions.length === 0) {
+      return formatBudgetShort(cashN);
+    }
     const pick = resolveBudgetAmount();
     return pick != null ? formatBudgetShort(pick) : "$100k";
-    // resolveBudgetAmount is sync pure from state
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account?.starting_cash, budgetPick, budgetCustom]);
+  }, [
+    account?.starting_cash,
+    account?.cash,
+    positions.length,
+    budgetPick,
+    budgetCustom,
+  ]);
 
   // Escape closes paper budget modal
   useEffect(() => {
