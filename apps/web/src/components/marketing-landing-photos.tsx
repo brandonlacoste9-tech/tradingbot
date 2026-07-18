@@ -129,10 +129,10 @@ function HeroShot() {
           <span className="font-mono text-[10px] text-accent">Trade floor</span>
         </div>
         <Image
-          src="/landing/trade-floor.jpg"
+          src="/landing/trade-floor-pixel-card.jpg"
           alt="IndieTrades paper trade floor with chart, ticket, and blotter"
-          width={1280}
-          height={720}
+          width={1400}
+          height={900}
           className="h-auto w-full object-cover object-top"
           priority
           sizes="(max-width: 1024px) 100vw, 50vw"
@@ -163,11 +163,11 @@ function ProductGallery() {
         <figure className="lg:col-span-8">
           <div className="overflow-hidden rounded-2xl border border-line/80 bg-ink/40 ring-1 ring-accent/15">
             <Image
-              src="/landing/trade-floor.jpg"
+              src="/landing/trade-floor-pixel-card.jpg"
               alt={SHOTS[0].alt}
-              width={1280}
-              height={720}
-              className="h-auto w-full object-cover"
+              width={1400}
+              height={900}
+              className="h-auto w-full object-cover object-top"
               sizes="(max-width: 1024px) 100vw, 66vw"
             />
           </div>
