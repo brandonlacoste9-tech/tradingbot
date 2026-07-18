@@ -28,10 +28,12 @@ We are building a **Claude-style AI trading desk**: the AI does most of the **re
 | Level | Description | Status |
 |-------|-------------|--------|
 | **L1** | Personal agent (CLI / chat + broker) | Partial |
-| **L2** | Web app: chat, policy, preflight, journal, BYO broker, paper default | **Current target** |
-| **L3** | Multi-user SaaS / embedded brokerage | Later only, with counsel |
+| **L2** | Web app: chat, policy, preflight, journal, paper default | **Live (single shared sim demo)** |
+| **L2-Paid** | Multi-user SaaS: auth, per-user paper, Stripe, quotas | **Current product target** |
+| **L3** | Embedded real brokerage / live multi-tenant | Later + counsel |
 
-**Current focus: L2 paper-trading AI dashboard (agent orchestration).**
+**Current focus: paid multi-user (per-user PaperSim + Grok + billing).**  
+See **[docs/MULTI_USER_PAID.md](./docs/MULTI_USER_PAID.md)**.
 
 ---
 
@@ -173,8 +175,9 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 3. [x] Grok/xAI LLM live on Render (`LLM_PROVIDER=xai`)  
 4. [x] Desk UI: health chips, portfolio stats, positions, auto-validate  
 5. [x] **IBKR paper path** — hardened client, `/broker/status`, `docs/IBKR_SETUP.md`, scripts  
-6. [ ] Owner: open IBKR paper + Gateway, run `scripts/run-api-ibkr.ps1` locally  
-7. [ ] Optional later: TradingView webhook → same policy gate  
+6. [ ] **Paid multi-user PR1** — Clerk auth + Postgres + user-scoped store (see MULTI_USER_PAID.md)  
+7. [ ] PR2 per-user PaperSim in DB → PR3 Stripe → PR4 quotas  
+8. [ ] Owner optional: IBKR Gateway local; not SaaS default  
 
 ---
 
