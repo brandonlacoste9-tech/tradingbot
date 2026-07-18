@@ -10,6 +10,8 @@ type Msg = {
   role: "user" | "assistant" | "system";
   text: string;
   tools?: ChatResponse["tool_results"];
+  mode?: string;
+  model?: string;
 };
 
 export default function Chat({
@@ -44,6 +46,8 @@ export default function Chat({
         role: "assistant",
         text: res.assistant_text,
         tools: res.tool_results,
+        mode: res.mode,
+        model: res.model,
       };
       setMessages((m) => [...m, assistant]);
 
@@ -94,6 +98,12 @@ export default function Chat({
                   : "bg-ink text-slate-200"
             }`}
           >
+            {(m.mode || m.model) && (
+              <div className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate-500">
+                {m.mode}
+                {m.model ? ` · ${m.model}` : ""}
+              </div>
+            )}
             <p className="whitespace-pre-wrap">{m.text}</p>
             {m.tools && m.tools.length > 0 && (
               <div className="mt-2 space-y-1 border-t border-line/80 pt-2">

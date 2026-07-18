@@ -1,4 +1,11 @@
-import type { ChatResponse, ConnectionInfo, JournalEntry, TradeProposal } from "./types";
+import type {
+  ChatResponse,
+  ConnectionInfo,
+  HealthInfo,
+  JournalEntry,
+  PositionRow,
+  TradeProposal,
+} from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -24,7 +31,7 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function health() {
-  return req<{ ok: boolean; paper_only: boolean; confirm_ttl_seconds: number }>("/health");
+  return req<HealthInfo>("/health");
 }
 
 export function validateConnection() {
@@ -66,7 +73,7 @@ export function listProposals() {
 export function portfolio() {
   return req<{
     account: Record<string, string> | null;
-    positions: unknown[];
+    positions: PositionRow[];
     source: string;
     error?: string;
   }>("/portfolio");

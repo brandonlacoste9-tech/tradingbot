@@ -44,6 +44,9 @@ export interface ChatResponse {
   tool_results: ToolResult[];
   proposal: TradeProposal | null;
   confirm_ttl_seconds: number;
+  model?: string;
+  provider?: string;
+  llm_enabled?: boolean;
 }
 
 export interface JournalEntry {
@@ -52,6 +55,15 @@ export interface JournalEntry {
   summary_md: string;
   decisions: unknown[];
   created_at: string;
+}
+
+export interface HealthInfo {
+  ok: boolean;
+  paper_only: boolean;
+  confirm_ttl_seconds: number;
+  broker_backend?: string;
+  llm_enabled?: boolean;
+  llm_provider?: string;
 }
 
 export interface ConnectionInfo {
@@ -63,4 +75,14 @@ export interface ConnectionInfo {
   is_paper?: boolean;
   last_validated?: string;
   status?: string;
+  backend?: string;
+}
+
+export interface PositionRow {
+  symbol: string;
+  qty: string;
+  avg_entry_price?: string;
+  current_price?: string;
+  unrealized_pl?: string;
+  market_value?: string;
 }
