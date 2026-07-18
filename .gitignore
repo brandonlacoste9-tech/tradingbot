@@ -19,3 +19,5 @@ apps/web/.env.local
 
 .env.stripe.local
 apps/api/.env.stripe.local
+.env.admin.local
+apps/api/.env.admin.local
