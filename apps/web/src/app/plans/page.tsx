@@ -5,7 +5,7 @@ import PlanCheckout from "@/components/PlanCheckout";
 export const metadata: Metadata = {
   title: "Plans & pricing — IndieTrades",
   description:
-    "Free, Pro (~$29 CAD), and Pro+ (~$59 CAD) paper desk plans. Human confirm, policy engine, paper fills. Not investment advice.",
+    "Free, Indie Pro (~$29 CAD), and Indie Pro+ (~$59 CAD) paper desk plans. Human confirm, policy engine, paper fills. Not investment advice.",
 };
 
 const FREE_FEATURES = [
@@ -80,12 +80,12 @@ const FAQ: { q: string; a: string }[] = [
     a: "No. IndieTrades is a paper desk. Orders go through a policy engine and human confirm into a simulated book (PaperSim). Not a broker.",
   },
   {
-    q: "What’s the difference between Pro and Pro+?",
-    a: "Mostly research headroom. Pro is ~10k chats/day; Pro+ is ~50k. The control plane (policy + confirm + paper fills) is the same.",
+    q: "What’s the difference between Indie Pro and Indie Pro+?",
+    a: "Mostly research headroom. Indie Pro is ~10k chats/day; Indie Pro+ is ~50k. The control plane (policy + confirm + paper fills) is the same.",
   },
   {
     q: "Can I use a promo code?",
-    a: "Yes. On Stripe Checkout, choose “Add promotion code” and enter your code before paying.",
+    a: "Yes. On Stripe Checkout, choose “Add promotion code” and enter your code (for example INDIEPRO) before paying.",
   },
   {
     q: "How do I cancel or change plan?",
@@ -104,7 +104,7 @@ export default function PlansPage() {
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <p className="hud-label mb-3">pricing</p>
           <h1 className="bridge-title max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Free, Pro, and Pro+ — same rails, more research room
+            Free, Indie Pro, and Indie Pro+ — same rails, more research room
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-mist sm:text-lg">
             Every plan keeps{" "}
@@ -172,7 +172,7 @@ export default function PlansPage() {
             <div className="hud-panel-header !border-0 !pb-0">
               <div>
                 <div className="hud-label mb-1">power</div>
-                <h2 className="text-xl font-semibold text-white">Pro</h2>
+                <h2 className="text-xl font-semibold text-white">Indie Pro</h2>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold tabular-nums text-white">
@@ -199,20 +199,21 @@ export default function PlansPage() {
               <PlanCheckout
                 variant="buy"
                 checkoutPlan="pro"
-                label="Upgrade to Pro — Checkout"
+                label="Get Indie Pro — Checkout"
               />
               <p className="text-[11px] leading-relaxed text-mist">
-                Promo codes accepted on Stripe Checkout.
+                Promo codes accepted on Stripe Checkout (e.g.{" "}
+                <span className="font-mono text-slate-300">INDIEPRO</span>).
               </p>
             </div>
           </article>
 
-          {/* Pro+ $59 */}
+          {/* Indie Pro+ $59 */}
           <article className="hud-panel flex flex-col ring-1 ring-cyan-400/25">
             <div className="hud-panel-header !border-0 !pb-0">
               <div>
                 <div className="hud-label mb-1">max</div>
-                <h2 className="text-xl font-semibold text-white">Pro+</h2>
+                <h2 className="text-xl font-semibold text-white">Indie Pro+</h2>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold tabular-nums text-white">
@@ -239,10 +240,10 @@ export default function PlansPage() {
               <PlanCheckout
                 variant="buy"
                 checkoutPlan="pro_plus"
-                label="Upgrade to Pro+ — Checkout"
+                label="Get Indie Pro+ — Checkout"
               />
               <p className="text-[11px] leading-relaxed text-mist">
-                Same paper-only control plane as Free and Pro.
+                Same paper-only control plane as Free and Indie Pro.
               </p>
             </div>
           </article>
@@ -267,8 +268,8 @@ export default function PlansPage() {
                 <tr className="border-b border-line bg-ink/60 font-mono text-[11px] uppercase tracking-wider text-mist">
                   <th className="px-4 py-3 font-medium">Feature</th>
                   <th className="px-4 py-3 font-medium">Free</th>
-                  <th className="px-4 py-3 font-medium text-accent">Pro</th>
-                  <th className="px-4 py-3 font-medium text-accent">Pro+</th>
+                  <th className="px-4 py-3 font-medium text-accent">Indie Pro</th>
+                  <th className="px-4 py-3 font-medium text-accent">Indie Pro+</th>
                 </tr>
               </thead>
               <tbody>
@@ -353,7 +354,8 @@ export default function PlansPage() {
               Ready when you are
             </h2>
             <p className="mt-1 max-w-md text-sm text-mist">
-              Stay on Free, pick Pro (~$29), or Pro+ (~$59) for max headroom.
+              Stay on Free, pick Indie Pro (~$29), or Indie Pro+ (~$59) for max
+              headroom.
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
@@ -361,12 +363,12 @@ export default function PlansPage() {
               <PlanCheckout
                 variant="buy"
                 checkoutPlan="pro"
-                label="Get Pro"
+                label="Get Indie Pro"
               />
               <PlanCheckout
                 variant="buy"
                 checkoutPlan="pro_plus"
-                label="Get Pro+"
+                label="Get Indie Pro+"
               />
             </div>
             <Link

@@ -250,7 +250,7 @@ function BillingPanelBody({
           }`}
         >
           <div className="font-mono text-[9px] uppercase tracking-wider text-mist">
-            Pro
+            Indie Pro
           </div>
           <div className="mt-0.5 text-sm font-semibold text-white">
             ${proPrice}
@@ -267,7 +267,7 @@ function BillingPanelBody({
           }`}
         >
           <div className="font-mono text-[9px] uppercase tracking-wider text-mist">
-            Pro+
+            Indie Pro+
           </div>
           <div className="mt-0.5 text-sm font-semibold text-white">
             ${proPlusPrice}
@@ -318,7 +318,7 @@ function BillingPanelBody({
               onClick={() => void onUpgrade("pro")}
               className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-accent/20 disabled:opacity-40"
             >
-              {busy ? "…" : "Pro $29"}
+              {busy ? "…" : "Indie Pro $29"}
             </button>
             <button
               type="button"
@@ -326,7 +326,7 @@ function BillingPanelBody({
               onClick={() => void onUpgrade("pro_plus")}
               className="rounded-lg border border-accent/50 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-40"
             >
-              {busy ? "…" : "Pro+ $59"}
+              {busy ? "…" : "Indie Pro+ $59"}
             </button>
           </>
         )}

@@ -12,12 +12,12 @@ PLAN_LIMITS: dict[str, dict[str, Any]] = {
         "price_cad": 0,
     },
     "pro": {
-        "label": "Pro",
+        "label": "Indie Pro",
         "chat_per_day": 10_000,
         "price_cad": 29,
     },
     "pro_plus": {
-        "label": "Pro+",
+        "label": "Indie Pro+",
         "chat_per_day": 50_000,
         "price_cad": 59,
     },

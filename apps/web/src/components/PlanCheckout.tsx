@@ -167,8 +167,8 @@ function PlanCheckoutBody({
 
   const defaultLabel =
     checkoutPlan === "pro_plus"
-      ? "Upgrade to Pro+"
-      : "Upgrade to Pro";
+      ? "Get Indie Pro+"
+      : "Get Indie Pro";
 
   if (variant === "manage" || (variant === "auto" && isPaid && onThisPlan)) {
     return (
