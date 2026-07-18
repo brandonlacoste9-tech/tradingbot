@@ -1,47 +1,61 @@
-# Massive market data
+# Market data (FMP + Massive)
 
-[Massive.com](https://massive.com/) provides US stocks/options/crypto/forex data via a Polygon-compatible REST API.
+External **quotes / bars / news** for research and PaperSim marks.  
+Not brokers — orders still go through PaperSim / IBKR paper only.
 
-This is **market data only** — not a broker. Paper trading still uses PaperSim / IBKR paper. Canadians use sim or IBKR; Massive does not place orders.
+## Providers
 
-## Env (Render API only)
+| Env | Provider | Best for |
+|-----|----------|----------|
+| `FMP_API_KEY` | [Financial Modeling Prep](https://financialmodelingprep.com/) | Quotes + multi-day EOD history (`/stable/*`) |
+| `MASSIVE_API_KEY` | [Massive](https://massive.com/) (Polygon host) | News, prev-close fallback |
+| `MASSIVE_BASE_URL` | default `https://api.polygon.io` | Compatible REST base |
+| `FMP_BASE_URL` | default `https://financialmodelingprep.com` | FMP base |
 
-| Variable | Purpose |
-|----------|---------|
-| `MASSIVE_API_KEY` | Your Massive dashboard API key |
-| `MASSIVE_BASE_URL` | Default `https://api.polygon.io` (compatible host) |
+**Cascade:** FMP → Massive → PaperSim/broker seed.
 
-**Do not** reuse this key as `ADMIN_API_KEY`. Keep admin ops and market data separate.
+**Never** reuse these keys as `ADMIN_API_KEY`.
 
-## What free/basic typically unlocks
+## What free tiers typically unlock
+
+### FMP (`/stable`)
+
+| Feature | This desk |
+|---------|-----------|
+| Quote | Yes |
+| Profile | Yes |
+| EOD history (full/light) | Yes |
+| Stock news | Often paid (402) |
+| Batch quote | Often paid (402) |
+| Legacy `/api/v3/*` | Often 403 on new keys — we use `/stable` only |
+
+### Massive / Polygon
 
 | Feature | Free/basic |
 |---------|------------|
 | Prev-day OHLC | Yes |
-| Ticker reference | Yes |
 | News | Yes |
-| Financials / indicators | Often yes |
 | Real-time last trade / NBBO | No (403) |
-| Multi-day historical range | Often no (403) |
-| Rate limit | ~5 calls/min (429 if exceeded) |
+| Multi-day range | Often no (403) |
+| Rate limit | ~5/min |
 
-## How the desk uses it
+## Desk integration
 
-- Agent tools `get_quote`, `get_bars`, `get_news` prefer Massive when configured
-- Proposal limit pricing uses Massive prev close when available
-- PaperSim marks update via `set_mark` so portfolio marks track real prev close
-- Falls back to sim seed prices on error / rate limit
+- Tools: `get_quote`, `get_bars`, `get_news`
+- Proposal limit prices use market-data last when available
+- PaperSim `set_mark` updates portfolio marks from real quotes
+- Failures fall back to sim seeds
 
 ## Endpoints
 
 ```http
-GET /health                 → massive_configured, market_data
-GET /market/status          → exchange open/closed (auth)
+GET /health          → fmp_configured, massive_configured, market_data
+GET /market/status   → provider probe (auth)
 ```
 
-## Ops checklist
+## Ops
 
-1. Set `MASSIVE_API_KEY` on Render  
-2. Set a **different** random `ADMIN_API_KEY` for kill switch  
-3. Confirm `GET /health` → `"massive_configured": true`  
-4. Chat: “quote AAPL” should return `source: massive` (delayed prev session)
+1. Set `FMP_API_KEY` and/or `MASSIVE_API_KEY` on **Render only**  
+2. Keep a separate random `ADMIN_API_KEY` for kill switch  
+3. Confirm `GET /health` → `"fmp_configured": true`  
+4. Chat “quote AAPL” → `source: fmp` when FMP is set  

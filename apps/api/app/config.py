@@ -33,8 +33,11 @@ class Settings(BaseSettings):
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
     alpaca_data_url: str = "https://data.alpaca.markets"
 
-    # Massive.com market data (Polygon-compatible REST). Research + PaperSim marks.
-    # NOT a broker. Separate from ADMIN_API_KEY.
+    # Market data (NOT brokers; separate from ADMIN_API_KEY)
+    # FMP = Financial Modeling Prep (preferred for quotes + EOD history)
+    fmp_api_key: str = ""
+    fmp_base_url: str = "https://financialmodelingprep.com"
+    # Massive.com (Polygon-compatible) — news / prev close fallback
     massive_api_key: str = ""
     massive_base_url: str = "https://api.polygon.io"
 

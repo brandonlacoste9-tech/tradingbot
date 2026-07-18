@@ -179,7 +179,8 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 7. [x] **PR2** Postgres persistence (hydrate/flush; falls back to memory)  
 8. [x] **PR3** Stripe Checkout/Portal/webhook + free chat caps  
 9. [x] **PR4** quotas snapshot, LLM circuit breaker, admin kill switch  
-9b. [x] **Massive market data** — `MASSIVE_API_KEY` for quotes/news (not admin)  
+9b. [x] **Market data** — `FMP_API_KEY` + `MASSIVE_API_KEY` (quotes/bars/news; not admin)  
+
 
 
 10. [ ] Clerk SignIn UI when publishable key configured  

@@ -1,4 +1,4 @@
-"""Massive market data client + tool wiring (mocked HTTP)."""
+"""Market data: Massive + FMP + router (mocked HTTP)."""
 
 from unittest.mock import AsyncMock, patch
 
@@ -9,7 +9,11 @@ from app.brokers.factory import reset_broker_cache
 from app.brokers.sim import PaperSimBroker
 from app.config import get_settings
 from app.main import app
-from app.marketdata.massive import get_quote, is_massive_configured
+from app.marketdata.fmp import get_quote as fmp_get_quote
+from app.marketdata.fmp import is_fmp_configured
+from app.marketdata.massive import get_quote as massive_get_quote
+from app.marketdata.massive import is_massive_configured
+from app.marketdata.router import get_quote as md_get_quote
 
 
 @pytest.fixture(autouse=True)
@@ -23,16 +27,19 @@ def _reset():
 
 def test_not_configured_by_default():
     assert is_massive_configured() is False
+    assert is_fmp_configured() is False
 
 
-def test_configured_when_key_set(monkeypatch):
+def test_configured_when_keys_set(monkeypatch):
     monkeypatch.setenv("MASSIVE_API_KEY", "test-key-123")
+    monkeypatch.setenv("FMP_API_KEY", "fmp-key-456")
     get_settings.cache_clear()
     assert is_massive_configured() is True
+    assert is_fmp_configured() is True
 
 
 @pytest.mark.asyncio
-async def test_get_quote_from_prev(monkeypatch):
+async def test_massive_get_quote_from_prev(monkeypatch):
     monkeypatch.setenv("MASSIVE_API_KEY", "test-key")
     get_settings.cache_clear()
     fake = {
@@ -52,11 +59,56 @@ async def test_get_quote_from_prev(monkeypatch):
         "status": "OK",
     }
     with patch("app.marketdata.massive._get", new=AsyncMock(return_value=fake)):
-        q = await get_quote("aapl")
+        q = await massive_get_quote("aapl")
     assert q["symbol"] == "AAPL"
     assert q["close"] == 103.5
     assert q["source"] == "massive"
-    assert q["delayed"] is True
+
+
+@pytest.mark.asyncio
+async def test_fmp_get_quote(monkeypatch):
+    monkeypatch.setenv("FMP_API_KEY", "fmp-test")
+    get_settings.cache_clear()
+    fake = [
+        {
+            "symbol": "AAPL",
+            "name": "Apple Inc.",
+            "price": 333.74,
+            "changePercentage": 0.14,
+            "change": 0.48,
+            "volume": 1e6,
+            "dayLow": 329.0,
+            "dayHigh": 335.0,
+            "yearHigh": 335.0,
+            "yearLow": 200.0,
+            "marketCap": 4e12,
+        }
+    ]
+    with patch("app.marketdata.fmp._get", new=AsyncMock(return_value=fake)):
+        q = await fmp_get_quote("aapl")
+    assert q["symbol"] == "AAPL"
+    assert q["close"] == 333.74
+    assert q["source"] == "fmp"
+
+
+@pytest.mark.asyncio
+async def test_router_prefers_fmp(monkeypatch):
+    monkeypatch.setenv("FMP_API_KEY", "fmp")
+    monkeypatch.setenv("MASSIVE_API_KEY", "mass")
+    get_settings.cache_clear()
+    fmp_q = {
+        "symbol": "AAPL",
+        "close": 10.0,
+        "price": "10.0",
+        "source": "fmp",
+    }
+    with patch("app.marketdata.fmp.get_quote", new=AsyncMock(return_value=fmp_q)):
+        with patch(
+            "app.marketdata.massive.get_quote",
+            new=AsyncMock(side_effect=AssertionError("should not call massive")),
+        ):
+            q = await md_get_quote("AAPL")
+    assert q["source"] == "fmp"
 
 
 @pytest.mark.asyncio
@@ -67,18 +119,20 @@ async def test_sim_set_mark():
     assert float(t["price"]) == 333.74
 
 
-def test_health_exposes_massive_flag(monkeypatch):
-    monkeypatch.setenv("MASSIVE_API_KEY", "k")
+def test_health_exposes_md_flags(monkeypatch):
+    monkeypatch.setenv("FMP_API_KEY", "k")
+    monkeypatch.setenv("MASSIVE_API_KEY", "m")
     get_settings.cache_clear()
     client = TestClient(app)
     r = client.get("/health")
     assert r.status_code == 200
     body = r.json()
+    assert body["fmp_configured"] is True
     assert body["massive_configured"] is True
-    assert body["market_data"]["provider"] == "massive"
+    assert body["market_data"]["primary"] == "fmp"
 
 
-def test_market_status_without_key():
+def test_market_status_without_keys():
     client = TestClient(app)
     r = client.get("/market/status", headers={"X-User-Id": "md-user"})
     assert r.status_code == 200

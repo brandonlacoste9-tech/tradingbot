@@ -72,8 +72,13 @@ export interface HealthInfo {
   global_kill?: boolean;
   llm_circuit?: string;
   admin_api_configured?: boolean;
+  fmp_configured?: boolean;
   massive_configured?: boolean;
-  market_data?: { configured?: boolean; provider?: string; base_url?: string };
+  market_data?: {
+    primary?: string | null;
+    fmp?: { configured?: boolean; provider?: string };
+    massive?: { configured?: boolean; provider?: string };
+  };
   version?: string;
 }
 

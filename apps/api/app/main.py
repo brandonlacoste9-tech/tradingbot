@@ -45,12 +45,14 @@ from app.brokers.factory import get_broker_async, sim_tenant_count
 from app.config import get_settings
 from app.db.pool import close_pool, init_pool, is_db_available
 from app.marketdata import (
-    get_bars as massive_get_bars,
-    get_market_status as massive_market_status,
-    get_news as massive_get_news,
-    get_quote as massive_get_quote,
+    any_md_configured,
+    get_bars as md_get_bars,
+    get_market_status as md_market_status,
+    get_news as md_get_news,
+    get_quote as md_get_quote,
+    is_fmp_configured,
     is_massive_configured,
-    massive_status,
+    providers_status,
 )
 from app.policy.engine import (
     PolicyContext,
@@ -73,8 +75,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 multi-user paper desk + Massive market data + admin (PR4)",
-    version="0.6.1",
+    description="L2 multi-user paper desk + FMP/Massive market data + admin (PR4)",
+    version="0.6.2",
     lifespan=lifespan,
 )
 
@@ -179,10 +181,10 @@ async def _build_policy_context(client, symbol: str) -> PolicyContext:
 
 
 async def _latest_price(client, symbol: str) -> Decimal | None:
-    """Prefer Massive prev close when configured; else broker quote."""
-    if is_massive_configured():
+    """Prefer FMP/Massive market data when configured; else broker quote."""
+    if any_md_configured():
         try:
-            q = await massive_get_quote(symbol)
+            q = await md_get_quote(symbol)
             px = q.get("close") or q.get("price")
             if px is not None:
                 dec = Decimal(str(px))
@@ -357,23 +359,24 @@ async def _execute_tool(
         return await client.get_positions()
 
     if tool == "get_quote":
-        if is_massive_configured():
+        if any_md_configured():
             try:
-                q = await massive_get_quote(args["symbol"])
-                if hasattr(client, "set_mark") and q.get("close") is not None:
-                    client.set_mark(args["symbol"], q["close"])
+                q = await md_get_quote(args["symbol"])
+                mark = q.get("close") if q.get("close") is not None else q.get("price")
+                if hasattr(client, "set_mark") and mark is not None:
+                    client.set_mark(args["symbol"], mark)
                 return q
             except Exception as e:  # noqa: BLE001
                 fallback = await client.get_latest_trade(args["symbol"])
                 if isinstance(fallback, dict):
-                    fallback["massive_error"] = str(e)
+                    fallback["market_data_error"] = str(e)
                 return fallback
         return await client.get_latest_trade(args["symbol"])
 
     if tool == "get_bars":
-        if is_massive_configured():
+        if any_md_configured():
             try:
-                bars = await massive_get_bars(
+                bars = await md_get_bars(
                     args["symbol"],
                     timeframe=args.get("timeframe") or "1Day",
                     limit=int(args.get("limit") or 60),
@@ -387,7 +390,7 @@ async def _execute_tool(
                     limit=int(args.get("limit") or 60),
                 )
                 if isinstance(out, dict):
-                    out["massive_error"] = str(e)
+                    out["market_data_error"] = str(e)
                 return out
         return await client.get_bars(
             args["symbol"],
@@ -396,9 +399,9 @@ async def _execute_tool(
         )
 
     if tool == "get_news":
-        if is_massive_configured():
+        if any_md_configured():
             try:
-                return await massive_get_news(
+                return await md_get_news(
                     args["symbol"], limit=int(args.get("limit") or 5)
                 )
             except Exception as e:  # noqa: BLE001
@@ -406,7 +409,7 @@ async def _execute_tool(
                     args["symbol"], limit=int(args.get("limit") or 5)
                 )
                 if isinstance(out, dict):
-                    out["massive_error"] = str(e)
+                    out["market_data_error"] = str(e)
                 return out
         return await client.get_news(args["symbol"], limit=int(args.get("limit") or 5))
 
@@ -504,9 +507,10 @@ async def health():
         "global_kill": controls["global_kill"],
         "llm_circuit": breaker["state"],
         "admin_api_configured": bool((settings.admin_api_key or "").strip()),
+        "fmp_configured": is_fmp_configured(),
         "massive_configured": is_massive_configured(),
-        "market_data": massive_status(),
-        "version": "0.6.1",
+        "market_data": providers_status(),
+        "version": "0.6.2",
     }
 
 
@@ -695,13 +699,17 @@ async def billing_webhook(request: Request):
 
 @app.get("/market/status")
 async def market_data_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
-    """Massive market-data health (not a broker)."""
-    base = {**massive_status(), "user_id": user.id}
-    if not is_massive_configured():
-        return {**base, "ok": False, "note": "Set MASSIVE_API_KEY on the API"}
+    """FMP/Massive market-data health (not a broker)."""
+    base = {**providers_status(), "user_id": user.id}
+    if not any_md_configured():
+        return {
+            **base,
+            "ok": False,
+            "note": "Set FMP_API_KEY and/or MASSIVE_API_KEY on the API",
+        }
     try:
-        status = await massive_market_status()
-        return {"ok": True, **base, "exchange_status": status}
+        status = await md_market_status()
+        return {"ok": True, **base, "probe": status}
     except Exception as e:  # noqa: BLE001
         return {"ok": False, **base, "error": str(e)}
 
@@ -714,6 +722,7 @@ async def broker_status(user: Annotated[CurrentUser, Depends(get_current_user)])
         "broker_backend": getattr(client, "backend_name", settings.broker_backend),
         "paper_only": settings.paper_only,
         "user_id": user.id,
+        "fmp_configured": is_fmp_configured(),
         "massive_configured": is_massive_configured(),
     }
     if hasattr(client, "status_report"):
@@ -1154,8 +1163,8 @@ async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
         "auth_mode": settings.auth_mode,
         "broker_backend": settings.broker_backend,
         "llm_provider": settings.llm_provider,
-        "massive": massive_status(),
-        "version": "0.6.1",
+        "market_data": providers_status(),
+        "version": "0.6.2",
     }
 
 
