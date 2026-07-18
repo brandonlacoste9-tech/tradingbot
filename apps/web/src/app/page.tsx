@@ -28,8 +28,10 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public marketing home — logo, desk preview, facts.
- * Product surfaces: /trade (act), /desk (think), /plans (pay).
+ * Public marketing home.
+ * Variants: photos (default) | classic — see marketing-landing.tsx
+ * Revert anytime: /?landing=classic  or  NEXT_PUBLIC_LANDING_VARIANT=classic
+ * Product: /trade · /desk · /plans
  */
 export default function HomePage() {
   return <MarketingLanding />;
