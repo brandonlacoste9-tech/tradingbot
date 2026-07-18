@@ -204,3 +204,57 @@ def test_manual_ticket_status_filled_not_only_submitted():
     )
     assert c.status_code == 200
     assert c.json()["proposal"]["policy_status"] in ("filled", "submitted")
+
+
+def test_paper_budget_rebases_starting_cash_and_book_pnl():
+    """Budget reset must update starting_cash so Book P&L is not stuck at −50%."""
+    client = TestClient(app)
+    headers = {"X-User-Id": "test-budget-rebase"}
+    # Start at default 100k via any call that hydrates
+    client.post(
+        "/paper/reset",
+        headers=headers,
+        json={"starting_cash": 100_000},
+    )
+    r = client.post(
+        "/paper/reset",
+        headers=headers,
+        json={"starting_cash": 50_000},
+    )
+    assert r.status_code == 200, r.text
+    acc = r.json()["account"]
+    assert float(acc["cash"]) == 50_000.0
+    assert float(acc["starting_cash"]) == 50_000.0
+    assert abs(float(acc["day_pnl"])) < 0.02
+    assert abs(float(acc["day_pnl_pct"])) < 0.02
+
+
+def test_orders_list_includes_symbol_and_limit_for_working():
+    client = TestClient(app)
+    headers = {"X-User-Id": "test-orders-display"}
+    p = _ticket(
+        client,
+        headers,
+        symbol="AAPL",
+        side="buy",
+        qty="2",
+        order_type="limit",
+        limit_price="50",
+        reason="Working order must show symbol and limit",
+    )
+    c = client.post(
+        "/proposals/confirm",
+        headers=headers,
+        json={"proposal_id": p["id"]},
+    )
+    assert c.status_code == 200
+    assert c.json()["proposal"]["policy_status"] == "working"
+    o = client.get("/orders", headers=headers)
+    assert o.status_code == 200
+    rows = o.json()["orders"]
+    working = [x for x in rows if str(x.get("status")).lower() == "working"]
+    assert working, rows
+    w = working[0]
+    assert w.get("symbol") == "AAPL"
+    assert str(w.get("limit_price")) in ("50", "50.0", "50.00")
+    assert str(w.get("side")).lower() == "buy"

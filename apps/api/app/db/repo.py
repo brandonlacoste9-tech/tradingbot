@@ -342,13 +342,25 @@ async def load_orders(user_id: str, limit: int = 100) -> list[dict[str, Any]]:
         raw = r["raw_response"]
         if isinstance(raw, str):
             raw = json.loads(raw)
+        raw = raw if isinstance(raw, dict) else {}
+        # Flatten desk fields from raw_response so Orders tab never shows "—"
         out.append(
             {
                 "id": r["id"],
                 "proposal_id": r["proposal_id"],
                 "client_order_id": r["client_order_id"],
-                "broker_order_id": r["broker_order_id"],
-                "status": r["status"],
+                "broker_order_id": r["broker_order_id"] or raw.get("id"),
+                "status": r["status"] or raw.get("status"),
+                "symbol": raw.get("symbol"),
+                "side": raw.get("side"),
+                "qty": raw.get("qty"),
+                "limit_price": raw.get("limit_price"),
+                "order_type": raw.get("type") or raw.get("order_type"),
+                "fill_kind": raw.get("fill_kind"),
+                "filled_avg_price": raw.get("filled_avg_price"),
+                "note": raw.get("note"),
+                "paper": True,
+                "time_in_force": raw.get("time_in_force") or "day",
                 "raw_response": raw,
                 "created_at": r["created_at"].isoformat() if r["created_at"] else "",
             }
@@ -426,6 +438,7 @@ async def save_paper_state(
                 VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, now())
                 ON CONFLICT (user_id) DO UPDATE SET
                   cash = EXCLUDED.cash,
+                  starting_cash = EXCLUDED.starting_cash,
                   marks_json = EXCLUDED.marks_json,
                   client_orders_json = EXCLUDED.client_orders_json,
                   updated_at = now()

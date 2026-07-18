@@ -1739,6 +1739,34 @@ async def _evaluate_and_sync_orders(user_id: str, mem: MemoryStore) -> list[dict
     return changed
 
 
+def _enrich_order_row(o: dict[str, Any]) -> dict[str, Any]:
+    """Ensure symbol/side/qty/limit always present for Trade floor blotter."""
+    raw = o.get("raw_response") if isinstance(o.get("raw_response"), dict) else {}
+    out = dict(o)
+    for k in (
+        "symbol",
+        "side",
+        "qty",
+        "limit_price",
+        "order_type",
+        "fill_kind",
+        "filled_avg_price",
+        "note",
+        "time_in_force",
+    ):
+        if out.get(k) in (None, "", "—") and raw.get(k) is not None:
+            out[k] = raw.get(k)
+    if not out.get("broker_order_id") and raw.get("id"):
+        out["broker_order_id"] = raw.get("id")
+    if not out.get("status") and raw.get("status"):
+        out["status"] = raw.get("status")
+    # Broker raw uses "type" for order type
+    if not out.get("order_type") and raw.get("type"):
+        out["order_type"] = raw.get("type")
+    out["paper"] = True
+    return out
+
+
 @app.get("/orders")
 async def get_orders(
     user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -1747,8 +1775,62 @@ async def get_orders(
 ):
     mem = await _mem(user)
     await _evaluate_and_sync_orders(user.id, mem)
+
+    # Merge PaperSim open working orders that may only live on the broker book
+    client = await _client_async(user.id)
+    if hasattr(client, "list_orders_snapshot"):
+        try:
+            snap = client.list_orders_snapshot()  # type: ignore[misc]
+            by_broker = {
+                str(o.get("broker_order_id") or ""): o for o in mem.orders
+            }
+            by_client = {
+                str(o.get("client_order_id") or ""): o for o in mem.orders
+            }
+            for bo in snap:
+                bid = str(bo.get("id") or "")
+                cid = str(bo.get("client_order_id") or "")
+                existing = by_broker.get(bid) or by_client.get(cid)
+                if existing:
+                    # Refresh desk fields from live broker order
+                    existing.update(
+                        {
+                            "status": bo.get("status") or existing.get("status"),
+                            "symbol": bo.get("symbol") or existing.get("symbol"),
+                            "side": bo.get("side") or existing.get("side"),
+                            "qty": bo.get("qty") or existing.get("qty"),
+                            "limit_price": bo.get("limit_price")
+                            if bo.get("limit_price") is not None
+                            else existing.get("limit_price"),
+                            "raw_response": bo,
+                        }
+                    )
+                elif bo.get("status") == "working":
+                    row = {
+                        "id": new_id(),
+                        "proposal_id": None,
+                        "client_order_id": bo.get("client_order_id"),
+                        "broker_order_id": bo.get("id"),
+                        "symbol": bo.get("symbol"),
+                        "side": bo.get("side"),
+                        "qty": bo.get("qty"),
+                        "limit_price": bo.get("limit_price"),
+                        "status": "working",
+                        "fill_kind": bo.get("fill_kind"),
+                        "note": bo.get("note"),
+                        "paper": True,
+                        "time_in_force": bo.get("time_in_force") or "day",
+                        "raw_response": bo,
+                        "created_at": bo.get("created_at")
+                        or datetime.now(timezone.utc).isoformat(),
+                    }
+                    mem.add_order(row)
+        except Exception:  # noqa: BLE001
+            pass
+
+    enriched = [_enrich_order_row(o) for o in mem.orders]
     page = page_slice(
-        mem.orders,
+        enriched,
         limit=limit,
         offset=offset,
         reverse=True,
@@ -1908,8 +1990,13 @@ async def paper_reset(
             raise HTTPException(502, f"Failed to persist paper reset: {e}") from e
 
     mem = await _mem(user)
+    # Clear in-memory blotter so UI doesn't show pre-budget fills as "today"
+    mem.orders.clear()
     jentry = mem.add_journal(
-        summary_md=f"**Paper book reset** to ${cash:,.0f} virtual cash. Fresh start.",
+        summary_md=(
+            f"**Paper book reset** to ${cash:,.0f} virtual cash. "
+            f"Book start rebased — day P&L starts at $0. Fresh start."
+        ),
         decisions=[{"type": "paper_reset", "starting_cash": str(cash)}],
     )
     ts = get_tenant_store()

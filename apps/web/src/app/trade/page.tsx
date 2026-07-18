@@ -397,6 +397,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const equity = account?.equity || account?.portfolio_value;
   const cash = account?.cash;
   const bp = account?.buying_power || cash;
+  const startingCash = account?.starting_cash;
   const dayPnl = account?.day_pnl;
   const dayPnlPct = account?.day_pnl_pct;
   const openPnl = useMemo(() => {
@@ -726,7 +727,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <Stat label="Cash" value={loading ? "…" : fmtMoney(cash)} />
           <Stat label="Buying power" value={loading ? "…" : fmtMoney(bp)} />
           <Stat
-            label="Day P&L"
+            label="Book P&L"
             value={
               loading
                 ? "…"
@@ -747,7 +748,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
         </div>
         <p className="mb-4 font-mono text-[10px] leading-relaxed text-mist">
           Simulated paper account — not a broker · market data may be delayed ·
-          starting budget {budgetChip} (reset anytime)
+          book start{" "}
+          {startingCash != null && startingCash !== ""
+            ? fmtMoney(startingCash)
+            : budgetChip}{" "}
+          · Book P&amp;L is vs that start (Paper budget rebases it)
         </p>
 
         {/*
@@ -1106,6 +1111,16 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                     <ul className="max-h-80 space-y-2 overflow-y-auto">
                       {workingOrders.map((o) => {
                         const id = String(o.broker_order_id || o.id || "");
+                        const raw =
+                          o.raw_response &&
+                          typeof o.raw_response === "object" &&
+                          !Array.isArray(o.raw_response)
+                            ? (o.raw_response as Record<string, unknown>)
+                            : {};
+                        const side = String(o.side || raw.side || "").toUpperCase();
+                        const qty = String(o.qty ?? raw.qty ?? "");
+                        const sym = String(o.symbol || raw.symbol || "—");
+                        const lim = o.limit_price ?? raw.limit_price;
                         return (
                           <li
                             key={id}
@@ -1117,13 +1132,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                                   working
                                 </span>
                                 <span className="ml-2 font-bold text-white">
-                                  {String(o.side || "").toUpperCase()}{" "}
-                                  {String(o.qty || "")}{" "}
-                                  {String(o.symbol || "—")}
+                                  {side} {qty} {sym}
                                 </span>
                                 <div className="mt-1 text-mist">
-                                  Limit {fmtPx(String(o.limit_price ?? ""))} · Day
-                                  TIF · PAPER
+                                  Limit {fmtPx(lim != null ? String(lim) : null)} ·
+                                  Day TIF · PAPER
                                 </div>
                               </div>
                               <button

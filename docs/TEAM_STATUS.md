@@ -128,7 +128,17 @@ Someone can:
 
 ---
 
-## 6. Open / later (not in sprint)
+## 6. Feel-check punch list (v1.0)
+
+| # | Item | Status |
+|---|------|--------|
+| 1 | Day/book P&L −50% after $50k budget (starting_cash not updated in Postgres) | **Fixed** — UPDATE starting_cash + empty-book heal + label **Book P&L** |
+| 2 | Orders row `Limit —` / symbol `—` | **Fixed** — flatten raw_response + merge sim working book + UI fallbacks |
+| 3 | Quotes as-of brief `—` | Minor · leave |
+| 4 | Clerk `pk_test_` / prod DNS | Later — before paid ads |
+| 5 | Chg% blank on some names | Cosmetic · leave |
+
+## 7. Open / later (not in sprint)
 
 | Item | When |
 |------|------|
@@ -140,7 +150,7 @@ Someone can:
 
 ---
 
-## 7. Key commits (recent)
+## 8. Key commits (recent)
 
 | Commit | What |
 |--------|------|
@@ -153,7 +163,7 @@ Someone can:
 
 ---
 
-## 8. Team stance (locked 2026-07-18)
+## 9. Team stance (locked 2026-07-18)
 
 **Agree with owner lean.** Stay frozen on Phase 4. Beta loop is coherent for organic feel-check. Next work only if feel-check finds honesty/UX slips — **not new scope.**
 

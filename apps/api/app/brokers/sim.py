@@ -153,14 +153,27 @@ class PaperSimBroker:
         }
 
     async def get_account(self) -> dict[str, Any]:
+        rebaseline = False
         with self._lock:
+            # Heal pre-fix paper_accounts that never updated starting_cash on
+            # budget reset (cash rebased, start stuck at 100k → fake −50% book).
+            open_pos = any(p["qty"] != 0 for p in self._positions.values())
+            if (
+                not open_pos
+                and self._equity_start > 0
+                and abs(self._cash - self._equity_start) > Decimal("1")
+                and abs(self._equity() - self._cash) < Decimal("0.02")
+            ):
+                self._equity_start = self._cash
+                rebaseline = True
+
             eq = self._equity()
             start = self._equity_start
             day = eq - start
             pct = (
                 float((day / start) * Decimal("100")) if start > 0 else 0.0
             )
-            return {
+            out = {
                 "id": f"SIM-{self.user_id or 'demo'}"[:32],
                 "account_number": f"SIM-{self.user_id or 'demo'}"[:32],
                 "status": "ACTIVE",
@@ -174,6 +187,12 @@ class PaperSimBroker:
                 "currency": "USD",
                 "is_paper": True,
             }
+        if rebaseline:
+            try:
+                await self._persist()
+            except Exception:  # noqa: BLE001
+                pass
+        return out
 
     async def get_positions(self) -> list[dict[str, Any]]:
         with self._lock:
