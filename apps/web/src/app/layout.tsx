@@ -10,7 +10,16 @@ import { Geist, Geist_Mono } from "next/font/google";
 import ClerkTokenSync from "@/components/ClerkTokenSync";
 import { IndieTradesLogo } from "@/components/indie-trades-logo";
 import ThemeToggle from "@/components/ThemeToggle";
+import {
+  DEFAULT_DESCRIPTION,
+  getSiteUrl,
+  GOOGLE_SITE_VERIFICATION,
+  SEO_KEYWORDS,
+  SITE_NAME,
+} from "@/lib/site";
 import "./globals.css";
+
+const siteUrl = getSiteUrl();
 
 /** Prevent theme flash before React hydrates */
 const themeBootScript = `
@@ -36,9 +45,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IndieTrades — Paper trading desk",
-  description:
-    "IndieTrades (indietrades.com): research → policy → confirm. Multi-user paper trading. Not investment advice.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${SITE_NAME} — AI Paper Trading Desk | Practice Stocks Free`,
+    template: `%s · ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: SEO_KEYWORDS,
+  authors: [{ name: SITE_NAME, url: siteUrl }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "finance",
+  openGraph: {
+    title: `${SITE_NAME} — AI paper trading desk`,
+    description: DEFAULT_DESCRIPTION,
+    url: siteUrl,
+    siteName: SITE_NAME,
+    type: "website",
+    locale: "en_CA",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — AI paper trading desk`,
+    description: DEFAULT_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: GOOGLE_SITE_VERIFICATION
+    ? { google: GOOGLE_SITE_VERIFICATION }
+    : undefined,
 };
 
 const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
@@ -72,6 +115,12 @@ function AuthChrome() {
             className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
           >
             Plans
+          </a>
+          <a
+            href="/paper-trading"
+            className="hidden rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white md:inline sm:px-3 sm:text-sm"
+          >
+            Learn
           </a>
         </nav>
       </div>

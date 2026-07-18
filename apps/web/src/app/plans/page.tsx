@@ -3,9 +3,16 @@ import Link from "next/link";
 import PlanCheckout from "@/components/PlanCheckout";
 
 export const metadata: Metadata = {
-  title: "Plans & pricing — IndieTrades",
+  title: "Plans & Pricing — Free, Pro, Pro+ (CAD)",
   description:
-    "Free, Indie Pro (~$29 CAD), and Indie Pro+ (~$59 CAD) paper desk plans. Human confirm, policy engine, paper fills. Not investment advice.",
+    "IndieTrades pricing: Free paper desk, Indie Pro (~$29 CAD), Indie Pro+ (~$59 CAD). Higher AI chat limits. Policy + human confirm. Not investment advice.",
+  alternates: { canonical: "/plans" },
+  openGraph: {
+    title: "IndieTrades plans & pricing",
+    description: "Free paper practice. Upgrade chat limits when you're ready.",
+    url: "/plans",
+    type: "website",
+  },
 };
 
 const FREE_FEATURES = [
