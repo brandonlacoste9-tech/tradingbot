@@ -64,7 +64,7 @@ export default function HomePage() {
               AI Trading Bot
             </h1>
             <p className="text-xs text-slate-500">
-              L2 paper dashboard · LLM proposes · policy decides · you confirm
+              L2 paper desk · web research · policy · confirm · sim/IBKR paper
             </p>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -77,7 +77,7 @@ export default function HomePage() {
               onClick={() => void onValidate()}
               className="rounded-lg border border-line bg-ink px-3 py-1.5 text-slate-200 hover:border-accent"
             >
-              Validate Alpaca paper
+              Validate paper broker
             </button>
           </div>
         </div>
@@ -102,8 +102,8 @@ export default function HomePage() {
               </dl>
             ) : (
               <p className="text-sm text-slate-500">
-                Click “Validate Alpaca paper” after setting keys in{" "}
-                <code className="text-slate-300">.env</code>.
+                Click “Validate paper broker”. Default backend is{" "}
+                <code className="text-slate-300">sim</code> (no keys).
               </p>
             )}
             {account && (

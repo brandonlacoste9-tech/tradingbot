@@ -13,10 +13,19 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://trading:trading@localhost:5432/ai_trading"
     confirm_ttl_seconds: int = 180
 
+    # sim = Canada-safe in-memory paper (default for Render)
+    # ibkr = local IB Gateway paper (port 4002)
+    # alpaca = US-eligible accounts only (not for Canadian residents)
+    broker_backend: str = "sim"
+
     alpaca_api_key_id: str = ""
     alpaca_api_secret_key: str = ""
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
     alpaca_data_url: str = "https://data.alpaca.markets"
+
+    ibkr_host: str = "127.0.0.1"
+    ibkr_port: int = 4002
+    ibkr_client_id: int = 1
 
     anthropic_api_key: str = ""
 

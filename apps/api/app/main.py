@@ -1,7 +1,8 @@
 """
-FastAPI app — demo chat → proposal → policy → confirm → Alpaca paper.
+FastAPI app — demo chat → proposal → policy → confirm → broker paper.
 
 LLM never submits orders. Confirm gate + TTL + policy re-check are mandatory.
+Default broker: PaperSim (Canada-safe). Optional: ibkr | alpaca via BROKER_BACKEND.
 """
 
 from __future__ import annotations
@@ -9,14 +10,14 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.agent.loop import run_agent_turn_demo
-from app.brokers.alpaca import AlpacaClient, AlpacaError
+from app.brokers import BrokerError, get_broker
 from app.config import get_settings
 from app.policy.engine import (
     PolicyContext,
@@ -26,11 +27,12 @@ from app.policy.engine import (
     is_proposal_expired,
 )
 from app.store import MemoryStore, TradeProposal, new_id, store
+from app.tools.web_search import web_search
 
 app = FastAPI(
     title="AI Trading Bot API",
     description="L2 paper-trading agent orchestration (policy + confirm gate)",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 settings = get_settings()
@@ -79,13 +81,11 @@ def _risk_limits() -> RiskLimits:
     )
 
 
-def _client() -> AlpacaClient:
-    return AlpacaClient(settings)
+def _client():
+    return get_broker()
 
 
-async def _build_policy_context(
-    client: AlpacaClient, symbol: str
-) -> PolicyContext:
+async def _build_policy_context(client, symbol: str) -> PolicyContext:
     account = await client.get_account()
     positions = await client.get_positions()
     pos = await client.get_position(symbol)
@@ -105,7 +105,7 @@ async def _build_policy_context(
     )
 
 
-async def _latest_price(client: AlpacaClient, symbol: str) -> Decimal | None:
+async def _latest_price(client, symbol: str) -> Decimal | None:
     try:
         trade = await client.get_latest_trade(symbol)
         t = trade.get("trade") or trade
@@ -113,7 +113,7 @@ async def _latest_price(client: AlpacaClient, symbol: str) -> Decimal | None:
             return Decimal(str(t["p"]))
         if "price" in t:
             return Decimal(str(t["price"]))
-    except AlpacaError:
+    except BrokerError:
         return None
     return None
 
@@ -156,7 +156,7 @@ async def _create_proposal_from_args(
 
     try:
         ctx = await _build_policy_context(client, symbol)
-    except AlpacaError as e:
+    except BrokerError as e:
         # Offline / missing keys: synthetic context for local UX demos
         ctx = PolicyContext(
             equity=Decimal("100000"),
@@ -259,6 +259,12 @@ async def _execute_tool(tool: str, args: dict[str, Any], mem: MemoryStore) -> An
     if tool == "get_news":
         return await client.get_news(args["symbol"], limit=int(args.get("limit") or 5))
 
+    if tool == "web_search":
+        return await web_search(
+            args.get("query") or "",
+            max_results=int(args.get("max_results") or 5),
+        )
+
     if tool == "compute_impact":
         symbol = args["symbol"].upper()
         qty = Decimal(str(args["qty"]))
@@ -307,28 +313,34 @@ async def _execute_tool(tool: str, args: dict[str, Any], mem: MemoryStore) -> An
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "paper_only": settings.paper_only, "confirm_ttl_seconds": _ttl()}
+    client = _client()
+    return {
+        "ok": True,
+        "paper_only": settings.paper_only,
+        "confirm_ttl_seconds": _ttl(),
+        "broker_backend": getattr(client, "backend_name", settings.broker_backend),
+    }
 
 
 @app.post("/connection/validate")
 async def validate_connection():
-    """Refinement #4: validate Alpaca keys; record last_validated + is_paper."""
+    """Validate broker connection; record last_validated + is_paper."""
     client = _client()
     try:
         result = await client.validate_connection()
-    except AlpacaError as e:
+    except BrokerError as e:
         store.audit_event("user", "validate_connection_failed", {"error": str(e)})
         raise HTTPException(400, str(e)) from e
 
-    if settings.paper_only and not result["is_paper"]:
+    if settings.paper_only and not result.get("is_paper", True):
         store.audit_event(
             "system",
             "reject_live_connection",
-            {"base_url": result.get("base_url")},
+            {"backend": result.get("backend")},
         )
         raise HTTPException(
             400,
-            "PAPER_ONLY is enabled; configure ALPACA_BASE_URL=https://paper-api.alpaca.markets",
+            "PAPER_ONLY is enabled; use BROKER_BACKEND=sim or IBKR/Alpaca paper.",
         )
 
     store.connection = result
@@ -352,13 +364,13 @@ async def agent_chat(body: ChatRequest):
             tool_results.append({"tool": tool, "ok": True, "result": result})
             if tool == "propose_order" and isinstance(result, dict):
                 proposal = result
-        except AlpacaError as e:
+        except BrokerError as e:
             tool_results.append(
                 {
                     "tool": tool,
                     "ok": False,
                     "error": str(e),
-                    "body": e.body,
+                    "body": getattr(e, "body", None),
                 }
             )
         except HTTPException:
@@ -398,7 +410,7 @@ async def get_proposal(proposal_id: str):
 @app.post("/proposals/confirm")
 async def confirm_proposal(body: ConfirmRequest):
     """
-    Human confirm gate. Re-check status + TTL, then submit to Alpaca paper
+    Human confirm gate. Re-check status + TTL, then submit to paper broker
     with the stored client_order_id (idempotency).
     """
     p = store.get_proposal(body.proposal_id)
@@ -438,7 +450,7 @@ async def confirm_proposal(body: ConfirmRequest):
     )
     try:
         ctx = await _build_policy_context(client, p.symbol)
-    except AlpacaError:
+    except BrokerError:
         ctx = PolicyContext(
             equity=Decimal("100000"),
             cash=Decimal("100000"),
@@ -470,11 +482,15 @@ async def confirm_proposal(body: ConfirmRequest):
             limit_price=p.limit_price,
             client_order_id=p.client_order_id,
         )
-    except AlpacaError as e:
+    except BrokerError as e:
         store.audit_event(
             "broker",
             "submit_failed",
-            {"proposal_id": p.id, "error": str(e), "body": e.body},
+            {
+                "proposal_id": p.id,
+                "error": str(e),
+                "body": getattr(e, "body", None),
+            },
         )
         raise HTTPException(502, f"Broker submit failed: {e}") from e
 
@@ -560,8 +576,12 @@ async def portfolio():
     try:
         account = await client.get_account()
         positions = await client.get_positions()
-        return {"account": account, "positions": positions, "source": "alpaca"}
-    except AlpacaError as e:
+        return {
+            "account": account,
+            "positions": positions,
+            "source": getattr(client, "backend_name", "broker"),
+        }
+    except BrokerError as e:
         return {
             "account": None,
             "positions": [],

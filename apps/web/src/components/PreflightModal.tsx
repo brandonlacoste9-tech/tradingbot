@@ -150,7 +150,7 @@ export default function PreflightModal({ proposal, onClose }: Props) {
             onClick={onConfirm}
             className="flex-1 rounded-xl bg-good px-4 py-2.5 font-medium text-ink hover:bg-good/90 disabled:opacity-40"
           >
-            {busy ? "Working…" : "Confirm paper order"}
+            {busy ? "Working…" : "Confirm paper trade"}
           </button>
         </div>
       </div>

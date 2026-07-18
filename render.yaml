@@ -18,6 +18,9 @@ services:
         value: "3.11.11"
       - key: PAPER_ONLY
         value: "true"
+      # Canada-safe default — no Alpaca keys required
+      - key: BROKER_BACKEND
+        value: "sim"
       - key: CONFIRM_TTL_SECONDS
         value: "180"
       - key: ALPACA_BASE_URL

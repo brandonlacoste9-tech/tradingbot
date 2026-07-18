@@ -7,14 +7,12 @@ from typing import Any
 
 import httpx
 
+from app.brokers.errors import BrokerError
 from app.config import Settings, get_settings
 
 
-class AlpacaError(Exception):
-    def __init__(self, message: str, status_code: int | None = None, body: Any = None):
-        super().__init__(message)
-        self.status_code = status_code
-        self.body = body
+class AlpacaError(BrokerError):
+    """Alpaca-specific broker error (also a BrokerError)."""
 
 
 class AlpacaClient:
@@ -39,6 +37,10 @@ class AlpacaClient:
     def is_paper_url(self) -> bool:
         return "paper" in self.base.lower()
 
+    @property
+    def backend_name(self) -> str:
+        return "alpaca"
+
     async def validate_connection(self) -> dict[str, Any]:
         """
         Refinement #4: validate keys on connect.
@@ -58,6 +60,7 @@ class AlpacaClient:
             "is_paper": self.is_paper_url,
             "last_validated": datetime.now(timezone.utc).isoformat(),
             "base_url": self.base,
+            "backend": self.backend_name,
         }
 
     async def _get(self, url: str, params: dict | None = None) -> Any:

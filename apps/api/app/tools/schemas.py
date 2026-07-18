@@ -58,7 +58,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     },
     {
         "name": "get_news",
-        "description": "Recent news headlines for a symbol.",
+        "description": "Recent news headlines for a symbol (broker feed if any).",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -66,6 +66,31 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "limit": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5},
             },
             "required": ["symbol"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "web_search",
+        "description": (
+            "Search the open web for research context (news, company, macro). "
+            "Use before proposing trades. Returns snippets — not investment advice."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "minLength": 2,
+                    "description": "Search query, e.g. NVDA earnings AI chips 2026",
+                },
+                "max_results": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10,
+                    "default": 5,
+                },
+            },
+            "required": ["query"],
             "additionalProperties": False,
         },
     },

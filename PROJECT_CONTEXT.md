@@ -168,11 +168,12 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 
 ### Next (priority order)
 
-1. [ ] **IBKR paper path** — Gateway/TWS setup + broker adapter replacing Alpaca  
-2. [ ] **Web research tools** in agent (search/news → thesis → propose/hold)  
-3. [ ] Wire real LLM tool loop (`agent/loop.py`)  
-4. [ ] Update UI copy: IBKR paper, not Alpaca  
+1. [x] **Broker abstraction** — `sim` (default) | `ibkr` skeleton | `alpaca`  
+2. [x] **Web research tools** — `web_search` tool + demo keywords  
+3. [ ] **Owner IBKR Gateway** — local paper on 4002 when ready  
+4. [ ] Wire real LLM tool loop (`agent/loop.py`)  
 5. [ ] Optional later: TradingView webhook → same policy gate  
+6. [ ] Merge `feat/broker-sim-web-search` → main + Render `BROKER_BACKEND=sim`  
 
 ---
 

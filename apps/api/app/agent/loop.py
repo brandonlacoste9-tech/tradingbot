@@ -20,11 +20,13 @@ from app.tools.schemas import as_anthropic_tools
 SYSTEM_PROMPT = """You are a paper-trading research and execution assistant.
 
 Rules:
+- Do most of the work by researching the web (web_search) before proposing trades.
 - Prefer limit orders. Never invent fills.
 - Always call propose_order for trades — never claim an order was submitted.
 - Use decide_hold when no trade is justified; empty quiet days still need a reason.
 - Respect risk limits; the policy engine will reject unsafe sizes.
 - Paper trading only unless the user has explicitly enabled live mode (not available in MVP).
+- Never claim live brokerage access for Canadian users on Alpaca — use sim or IBKR paper.
 """
 
 
@@ -79,11 +81,41 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             ],
         }
 
+    # Web research (primary AI job)
+    if any(
+        k in lower
+        for k in (
+            "search",
+            "research",
+            "look up",
+            "lookup",
+            "google",
+            "what is happening",
+            "headline",
+        )
+    ):
+        # Prefer free-text after keyword, else full message
+        q = text
+        for prefix in ("search for", "search", "research", "look up", "lookup"):
+            if lower.startswith(prefix):
+                q = text[len(prefix) :].strip(" :,-") or text
+                break
+        return {
+            "mode": "demo",
+            "assistant_text": f"Searching the web for: {q[:120]}…",
+            "actions": [
+                {
+                    "tool": "web_search",
+                    "args": {"query": q[:200], "max_results": 5},
+                }
+            ],
+        }
+
     # Buying power / account
     if any(k in lower for k in ("buying power", "account", "equity", "cash balance")):
         return {
             "mode": "demo",
-            "assistant_text": "Fetching account details from Alpaca paper…",
+            "assistant_text": "Fetching paper account details…",
             "actions": [{"tool": "get_account", "args": {}}],
         }
 
@@ -95,14 +127,22 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             "actions": [{"tool": "get_positions", "args": {}}],
         }
 
-    # News
+    # News (broker feed if any; prefer web_search for research)
     news_m = re.search(r"news\s+(?:on|for|about)?\s*([A-Za-z.]{1,8})", text, re.I)
     if "news" in lower:
         symbol = (news_m.group(1) if news_m else "SPY").upper().rstrip(".")
         return {
             "mode": "demo",
-            "assistant_text": f"Fetching news for {symbol}…",
-            "actions": [{"tool": "get_news", "args": {"symbol": symbol, "limit": 5}}],
+            "assistant_text": f"Researching news for {symbol} via web search…",
+            "actions": [
+                {
+                    "tool": "web_search",
+                    "args": {
+                        "query": f"{symbol} stock news",
+                        "max_results": 5,
+                    },
+                }
+            ],
         }
 
     # Propose order: "buy 1 share of SPY", "propose limit buy of 2 AAPL at 190"
@@ -151,9 +191,9 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
     return {
         "mode": "demo",
         "assistant_text": (
-            "I can: check buying power, list positions, fetch news, "
-            "propose a limit buy/sell (goes through policy + confirm), "
-            "or log a hold. Try: “Propose a limit buy of 1 share of SPY”"
+            "I can: search/research the web, check buying power, list positions, "
+            "propose a limit buy/sell (policy + confirm), or log a hold. "
+            "Try: “Research NVDA AI chips” or “Propose a limit buy of 1 share of SPY”"
         ),
         "actions": [],
     }

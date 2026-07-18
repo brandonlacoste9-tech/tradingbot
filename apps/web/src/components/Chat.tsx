@@ -22,7 +22,7 @@ export default function Chat({
       id: "welcome",
       role: "system",
       text:
-        "Paper-only agent. Try: “What is my buying power?” then “Propose a limit buy of 1 share of SPY”. Holds: “Hold — no edge today.”",
+        "Paper agent (sim by default). Try: “Research NVDA”, “What is my buying power?”, then “Propose a limit buy of 1 share of SPY”. Hold: “Hold — no edge today.”",
     },
   ]);
   const [input, setInput] = useState("");
@@ -159,7 +159,7 @@ export default function Chat({
                 {
                   id: crypto.randomUUID(),
                   role: "system",
-                  text: `Order submitted to Alpaca paper. broker_order_id=${updated.broker_order_id}`,
+                  text: `Order submitted to paper broker. broker_order_id=${updated.broker_order_id}`,
                 },
               ]);
               onProposalSubmitted?.();
