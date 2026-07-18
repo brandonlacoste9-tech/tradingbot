@@ -70,12 +70,9 @@ class Settings(BaseSettings):
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
     stripe_price_id_pro: str = ""  # price_... for Pro monthly
-    stripe_success_url: str = (
-        "https://hilarious-piroshki-08d173.netlify.app/?billing=success"
-    )
-    stripe_cancel_url: str = (
-        "https://hilarious-piroshki-08d173.netlify.app/?billing=cancel"
-    )
+    # Prefer production domain when DNS points at Netlify; Netlify subdomain still works.
+    stripe_success_url: str = "https://indietrades.com/?billing=success"
+    stripe_cancel_url: str = "https://indietrades.com/?billing=cancel"
     # Allow POST /billing/dev-set-plan without Stripe (local/demo only)
     stripe_dev_mode: bool = False
 
@@ -94,6 +91,8 @@ class Settings(BaseSettings):
     # Comma-separated. Include Netlify + local dev. Override via CORS_ORIGINS env.
     cors_origins: str = (
         "http://localhost:3000,"
+        "https://indietrades.com,"
+        "https://www.indietrades.com,"
         "https://hilarious-piroshki-08d173.netlify.app"
     )
 

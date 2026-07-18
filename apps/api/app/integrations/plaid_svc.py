@@ -69,7 +69,7 @@ async def create_link_token(
     body = {
         "client_id": s.plaid_client_id.strip(),
         "secret": s.plaid_secret.strip(),
-        "client_name": "AI Trading Paper Desk",
+        "client_name": "IndieTrades",
         "user": {"client_user_id": user_id},
         "products": products or ["transactions"],
         "country_codes": country_codes or ["US", "CA"],

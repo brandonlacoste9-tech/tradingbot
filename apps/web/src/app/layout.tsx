@@ -21,9 +21,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Trading Desk — Paper",
+  title: "IndieTrades — Paper desk",
   description:
-    "Research → policy → confirm. Multi-user paper trading desk. Not investment advice.",
+    "IndieTrades (indietrades.com): research → policy → confirm. Multi-user paper trading. Not investment advice.",
 };
 
 const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;

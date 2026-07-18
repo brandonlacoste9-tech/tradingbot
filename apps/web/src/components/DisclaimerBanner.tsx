@@ -40,10 +40,11 @@ export default function DisclaimerBanner() {
         <div className="text-sm text-slate-200">
           <p className="font-semibold text-warn">Before you start</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            This is a <strong>paper-trading research desk</strong>. Grok can
-            research and propose trades; a rules engine and your confirm gate
-            must pass before anything hits the paper book. No real money moves
-            here. Not investment advice. Not a registered dealer.
+            <strong>IndieTrades</strong> is a{" "}
+            <strong>paper-trading research desk</strong>. Grok can research and
+            propose trades; a rules engine and your confirm gate must pass
+            before anything hits the paper book. No real money moves here. Not
+            investment advice. Not a registered dealer.
           </p>
         </div>
         <button

@@ -114,10 +114,10 @@ export default function HomePage() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-semibold tracking-tight text-white">
-                AI Trading Desk
+                IndieTrades
               </h1>
               <p className="text-xs text-slate-500">
-                Multi-user paper · research → policy → confirm
+                indietrades.com · paper · research → policy → confirm
               </p>
               <div className="mt-2">
                 <UserBar />
@@ -262,7 +262,8 @@ export default function HomePage() {
       </div>
 
       <footer className="border-t border-line py-4 text-center text-[11px] text-slate-600">
-        Educational paper-trading tool. Not investment advice. Not a broker.{" "}
+        IndieTrades · indietrades.com · Educational paper trading. Not investment
+        advice. Not a broker.{" "}
         {healthInfo?.version ? `API v${healthInfo.version}` : ""}
       </footer>
     </main>

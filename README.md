@@ -1,6 +1,6 @@
-# tradingbot
+# IndieTrades (`tradingbot` monorepo)
 
-**L2 paper-trading AI dashboard** — Claude-style agent orchestration: **AI researches the web**, policy gates risk, human confirms, broker executes (paper-first).
+**Product:** [indietrades.com](https://indietrades.com) — L2 paper-trading AI desk. Claude-style agent orchestration: **AI researches the web**, policy gates risk, human confirms, broker executes (paper-first).
 
 > **Agents / Grok:** read [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) for full product context, Canada/IBKR constraints, deploy URLs, and next steps.
 

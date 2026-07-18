@@ -8,7 +8,7 @@
 
 ## Product definition (v1)
 
-**Name (working):** AI Trading Desk (paper)
+**Name:** IndieTrades — [indietrades.com](https://indietrades.com) (paper desk)
 
 **What users pay for**
 

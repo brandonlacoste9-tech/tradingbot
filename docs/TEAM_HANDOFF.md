@@ -1,5 +1,6 @@
-# Grok team handoff — AI Trading Desk (L2-Paid)
+# Grok team handoff — IndieTrades (L2-Paid)
 
+**Product:** IndieTrades · **https://indietrades.com**  
 **Date:** 2026-07-18  
 **Repo:** https://github.com/brandonlacoste9-tech/tradingbot  
 **Owner:** Brandon (Canada)  
@@ -11,7 +12,7 @@ Read **[PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md)** first. This file is the “
 
 ## One-line for the team
 
-We built a **Claude-style paper trading desk**: Grok researches → deterministic policy → human confirm (TTL) → per-user PaperSim. **Not** autonomous live money. **Not** Alpaca for the owner (Canada). SaaS path is multi-user + Clerk + Stripe + quotas.
+**IndieTrades** is a Claude-style paper trading desk: Grok researches → deterministic policy → human confirm (TTL) → per-user PaperSim. **Not** autonomous live money. **Not** Alpaca for the owner (Canada). SaaS path is multi-user + Clerk + Stripe + quotas.
 
 ---
 

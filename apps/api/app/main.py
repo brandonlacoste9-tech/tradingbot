@@ -80,9 +80,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="AI Trading Bot API",
-    description="L2 multi-user paper desk + market data + Plaid scaffold + admin",
-    version="0.6.4",
+    title="IndieTrades API",
+    description="IndieTrades (indietrades.com) — multi-user paper desk + market data + admin",
+    version="0.6.5",
     lifespan=lifespan,
 )
 
@@ -518,7 +518,8 @@ async def health():
         "massive_configured": is_massive_configured(),
         "market_data": providers_status(),
         "plaid": plaid_status(),
-        "version": "0.6.4",
+        "version": "0.6.5",
+        "product": "IndieTrades",
     }
 
 
@@ -1197,7 +1198,8 @@ async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
         "llm_provider": settings.llm_provider,
         "market_data": providers_status(),
         "plaid": plaid_status(),
-        "version": "0.6.4",
+        "version": "0.6.5",
+        "product": "IndieTrades",
     }
 
 

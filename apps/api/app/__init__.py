@@ -1,1 +1,1 @@
-"""AI Trading Bot API — L2 paper-trading agent orchestration."""
+"""IndieTrades API — L2 paper-trading agent orchestration (indietrades.com)."""

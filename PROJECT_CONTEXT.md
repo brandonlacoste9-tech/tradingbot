@@ -9,9 +9,14 @@
 
 ---
 
+## Product name
+
+**IndieTrades** · **https://indietrades.com**  
+Repo/service hostnames may still say `tradingbot` (GitHub/Render); product brand is IndieTrades.
+
 ## One-line pitch
 
-We are building a **Claude-style AI trading desk**: the AI does most of the **research work** (web search, news, market context), then a **hard-coded policy engine** and **human confirm** gate every order. Execution is **paper-first**. Broker is **not Alpaca** for the owner (Canada).
+We are building **IndieTrades**: a Claude-style AI trading desk — the AI does most of the **research work** (web search, news, market context), then a **hard-coded policy engine** and **human confirm** gate every order. Execution is **paper-first**. Broker is **not Alpaca** for the owner (Canada).
 
 ---
 
