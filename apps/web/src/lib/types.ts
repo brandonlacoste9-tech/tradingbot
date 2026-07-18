@@ -47,6 +47,14 @@ export interface ChatResponse {
   model?: string;
   provider?: string;
   llm_enabled?: boolean;
+  usage?: {
+    used: number;
+    limit: number;
+    remaining?: number;
+    plan?: string;
+  };
+  llm_circuit?: string;
+  plan?: string;
 }
 
 export interface JournalEntry {
@@ -73,11 +81,19 @@ export interface HealthInfo {
   llm_circuit?: string;
   admin_api_configured?: boolean;
   fmp_configured?: boolean;
+  alphavantage_configured?: boolean;
   massive_configured?: boolean;
   market_data?: {
     primary?: string | null;
     fmp?: { configured?: boolean; provider?: string };
+    alphavantage?: { configured?: boolean; provider?: string };
     massive?: { configured?: boolean; provider?: string };
+  };
+  plaid?: {
+    ready?: boolean;
+    client_id_configured?: boolean;
+    secret_configured?: boolean;
+    env?: string;
   };
   version?: string;
 }

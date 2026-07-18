@@ -183,8 +183,10 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 
 
 
-10. [ ] Clerk SignIn UI when publishable key configured  
-11. [ ] Owner optional: IBKR Gateway local; not SaaS default  
+10. [x] **Desk UX v1** — disclaimer, status/usage strip, how-it-works, chat chips, preflight  
+11. [ ] Clerk SignIn UI when publishable key configured  
+12. [ ] Owner optional: IBKR Gateway local; not SaaS default  
+
 
 ---
 

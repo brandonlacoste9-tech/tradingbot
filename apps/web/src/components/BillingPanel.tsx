@@ -98,6 +98,10 @@ export default function BillingPanel() {
   const remaining = status?.usage?.remaining;
   const chatBlocked = status?.service?.chat_blocked;
   const circuit = status?.service?.llm_circuit;
+  const pct =
+    used != null && limit != null && limit > 0
+      ? Math.min(100, Math.round((used / limit) * 100))
+      : null;
 
   return (
     <div className="rounded-2xl border border-line bg-panel p-4">
@@ -116,23 +120,30 @@ export default function BillingPanel() {
           LLM circuit: {circuit} (demo agent may run until provider recovers)
         </p>
       )}
+      {pct != null && used != null && limit != null && (
+        <div className="mb-3">
+          <div className="mb-1 flex justify-between text-[11px] text-slate-400">
+            <span>Daily chats</span>
+            <span className="font-mono">
+              {used}/{limit}
+              {remaining != null ? ` · ${remaining} left` : ""}
+            </span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-ink">
+            <div
+              className={`h-full rounded-full ${
+                pct >= 90 ? "bg-bad" : pct >= 70 ? "bg-warn" : "bg-accent"
+              }`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between">
           <dt className="text-slate-500">Plan</dt>
           <dd className="font-mono text-slate-100">{plan}</dd>
         </div>
-        <div className="flex justify-between">
-          <dt className="text-slate-500">Used today</dt>
-          <dd className="font-mono text-slate-100">
-            {used != null && limit != null ? `${used} / ${limit}` : "—"}
-          </dd>
-        </div>
-        {remaining != null && (
-          <div className="flex justify-between">
-            <dt className="text-slate-500">Remaining</dt>
-            <dd className="font-mono text-slate-100">{remaining}</dd>
-          </div>
-        )}
         <div className="flex justify-between">
           <dt className="text-slate-500">Stripe</dt>
           <dd className="font-mono text-slate-100">

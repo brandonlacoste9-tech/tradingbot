@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI Trading Bot — Paper",
-  description: "L2 paper-trading agent orchestration (policy + confirm gate)",
+  title: "AI Trading Desk — Paper",
+  description:
+    "Research → policy → confirm. Multi-user paper trading desk. Not investment advice.",
 };
 
 export default function RootLayout({
