@@ -228,6 +228,39 @@ export function marketQuotes(symbols: string[]) {
   }>(`/market/quotes?symbols=${encodeURIComponent(q)}`);
 }
 
+export function marketBars(
+  symbol: string,
+  timeframe: "1Day" | "1Month" = "1Day",
+  limit?: number
+) {
+  const lim =
+    limit ?? (timeframe === "1Month" ? 22 : 60);
+  const qs = new URLSearchParams({
+    symbol,
+    timeframe,
+    limit: String(lim),
+  });
+  return req<{
+    symbol: string;
+    timeframe: string;
+    bars: { t?: string | number | null; o: number; h: number; l: number; c: number; v?: number | null }[];
+    source?: string | null;
+    count: number;
+    fetched_at?: string;
+    error?: string;
+    paper?: boolean;
+  }>(`/market/bars?${qs.toString()}`);
+}
+
+export function marketSession() {
+  return req<{
+    ok: boolean;
+    now_utc: string;
+    us_rth_open: boolean;
+    label: string;
+  }>("/market/session");
+}
+
 export function listOrders() {
   return req<{ orders: Record<string, unknown>[]; user_id?: string }>("/orders");
 }

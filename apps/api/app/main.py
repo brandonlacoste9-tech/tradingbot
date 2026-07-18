@@ -922,6 +922,122 @@ async def market_quote(
     return await _fetch_quote_for_user(user.id, symbol)
 
 
+@app.get("/market/bars")
+async def market_bars(
+    symbol: str,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    timeframe: str = "1Day",
+    limit: int = 60,
+):
+    """
+    OHLC bars for Trade floor chart.
+    timeframe: 1Day (default) or 1Month (maps to ~22 daily bars).
+    Rate limited with quotes. Never invents bars — empty list if providers fail.
+    """
+    _rate_limit_quotes(user.id)
+    sym = (symbol or "").strip().upper()
+    if not sym or len(sym) > 16:
+        raise HTTPException(400, "Invalid symbol")
+
+    tf = (timeframe or "1Day").strip()
+    # Normalize aliases from UI. Both views use daily OHLC; 1M = ~1 trading month.
+    if tf in ("1M", "1Month", "month", "1mo"):
+        tf_api = "1Month"
+        lim = max(1, min(int(limit or 22), 30))
+        ui_tf = "1Month"
+    elif tf in ("1D", "1Day", "day"):
+        tf_api = "1Day"
+        lim = max(1, min(int(limit or 60), 120))
+        ui_tf = "1Day"
+    else:
+        tf_api = "1Day"
+        lim = max(1, min(int(limit or 60), 120))
+        ui_tf = "1Day"
+
+    try:
+        raw = await md_get_bars(sym, timeframe=tf_api, limit=lim)
+    except Exception as e:  # noqa: BLE001
+        return {
+            "symbol": sym,
+            "timeframe": ui_tf,
+            "bars": [],
+            "source": None,
+            "count": 0,
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "error": str(e),
+            "paper": True,
+            "user_id": user.id,
+        }
+
+    bars_in = list(raw.get("bars") or [])
+    # Providers may return newest-first (FMP) or oldest-first (Yahoo) — normalize ascending
+    def _ts_key(b: dict[str, Any]) -> float:
+        t = b.get("t")
+        if t is None:
+            return 0.0
+        if isinstance(t, (int, float)):
+            return float(t)
+        try:
+            return datetime.fromisoformat(str(t).replace("Z", "+00:00")).timestamp()
+        except Exception:  # noqa: BLE001
+            return 0.0
+
+    bars_sorted = sorted(bars_in, key=_ts_key)
+    if ui_tf == "1Month" and len(bars_sorted) > lim:
+        bars_sorted = bars_sorted[-lim:]
+
+    # Drop incomplete candles
+    clean: list[dict[str, Any]] = []
+    for b in bars_sorted:
+        c = b.get("c")
+        if c is None:
+            continue
+        o = b.get("o") if b.get("o") is not None else c
+        h = b.get("h") if b.get("h") is not None else max(float(o), float(c))
+        l = b.get("l") if b.get("l") is not None else min(float(o), float(c))
+        clean.append(
+            {
+                "t": b.get("t"),
+                "o": float(o),
+                "h": float(h),
+                "l": float(l),
+                "c": float(c),
+                "v": b.get("v"),
+            }
+        )
+
+    return {
+        "symbol": sym,
+        "timeframe": ui_tf,
+        "bars": clean,
+        "source": raw.get("source"),
+        "count": len(clean),
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "note": raw.get("note"),
+        "paper": True,
+        "user_id": user.id,
+    }
+
+
+@app.get("/market/session")
+async def market_session(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """US equity regular session flag for Trade floor chrome."""
+    from app.policy.engine import _is_us_equity_regular_session
+
+    now = datetime.now(timezone.utc)
+    rth = _is_us_equity_regular_session(now)
+    return {
+        "ok": True,
+        "now_utc": now.isoformat(),
+        "us_rth_open": rth,
+        "label": "US RTH open" if rth else "US RTH closed",
+        "user_id": user.id,
+        "paper": True,
+    }
+
+
 @app.get("/market/quotes")
 async def market_quotes(
     symbols: str,

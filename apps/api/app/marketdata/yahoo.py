@@ -112,11 +112,13 @@ async def get_bars(
     # map roughly: 1Day -> enough calendar days
     range_map = {
         "1Day": "1y" if lim > 60 else "6mo",
+        "1Month": "1mo",
         "1Hour": "5d",
         "5Min": "1d",
     }
     interval_map = {
         "1Day": "1d",
+        "1Month": "1d",
         "1Hour": "1h",
         "5Min": "5m",
     }

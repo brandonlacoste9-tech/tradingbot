@@ -9,10 +9,13 @@ import {
   type FormEvent,
 } from "react";
 import PreflightModal from "@/components/PreflightModal";
+import SymbolChart, { type ChartBar } from "@/components/symbol-chart";
 import {
   createProposal,
   listOrders,
+  marketBars,
   marketQuotes,
+  marketSession,
   paperReset,
   portfolio,
   validateConnection,
@@ -24,8 +27,10 @@ const clerkEnabled = Boolean(
 );
 
 const DEFAULT_WATCH = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META"];
-
 const QUICK_QTY = ["1", "5", "10", "25", "100"];
+
+const GREEN = "#22c55e";
+const RED = "#ef4444";
 
 type QuoteRow = {
   price: string | null;
@@ -34,6 +39,8 @@ type QuoteRow = {
   source?: string | null;
   ok: boolean;
 };
+
+type BlotterTab = "positions" | "orders" | "fills";
 
 function fmtMoney(v: string | number | null | undefined) {
   if (v === null || v === undefined || v === "") return "—";
@@ -70,6 +77,12 @@ function pnlClass(v: string | number | null | undefined) {
   return n > 0 ? "text-good" : "text-bad";
 }
 
+function chgColor(v: string | null | undefined): string {
+  const n = Number(String(v ?? "").replace("%", ""));
+  if (Number.isNaN(n) || n === 0) return "#94a3b8";
+  return n > 0 ? GREEN : RED;
+}
+
 export default function TradePage() {
   if (clerkEnabled) {
     return <TradePageClerk />;
@@ -93,39 +106,24 @@ function TradePageClerk() {
           📈
         </div>
         <p className="hud-label mb-2">Paper trading floor</p>
-        <h1 className="bridge-title text-2xl font-bold">Sign in & practice free</h1>
+        <h1 className="bridge-title text-2xl font-bold">
+          Practice before real money
+        </h1>
         <p className="mt-3 text-sm leading-relaxed text-mist">
-          Real stock symbols · $100k virtual cash · policy + confirm.
+          Real stock symbols · chart · ticket · $100k virtual cash.
           <br />
           Zero risk. Feels like the real desk.
         </p>
-        <ul className="mx-auto mt-6 max-w-sm space-y-2 text-left text-sm text-mist">
-          <li className="flex gap-2">
-            <span className="text-good">✓</span> Try stocks before you have big capital
-          </li>
-          <li className="flex gap-2">
-            <span className="text-good">✓</span> Learn the ticket without stress
-          </li>
-          <li className="flex gap-2">
-            <span className="text-good">✓</span> Test ideas safely — reset anytime
-          </li>
-        </ul>
-        <div className="mt-8 flex justify-center gap-3">
+        <div className="mt-8 flex justify-center">
           <SignInButton mode="modal">
             <button
               type="button"
               className="hud-btn-primary rounded-full px-8 py-3 text-sm"
             >
-              Sign in — start paper trading
+              Sign in — open floor
             </button>
           </SignInButton>
         </div>
-        <p className="mt-4 text-xs text-mist">
-          Prefer AI research first?{" "}
-          <a href="/" className="text-accent hover:underline">
-            Open AI Desk
-          </a>
-        </p>
       </main>
     );
   }
@@ -154,28 +152,46 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const [proposal, setProposal] = useState<TradeProposal | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [showFaq, setShowFaq] = useState(false);
-  /** Celebration overlay text — only set for intentional moments (fill vs reset). */
   const [celebrate, setCelebrate] = useState<string | null>(null);
+  const [blotter, setBlotter] = useState<BlotterTab>("positions");
+  const [quotesAt, setQuotesAt] = useState<string | null>(null);
+  const [session, setSession] = useState<{
+    us_rth_open: boolean;
+    label: string;
+  } | null>(null);
+
+  const [symbol, setSymbol] = useState("AAPL");
+  const [side, setSide] = useState<"buy" | "sell">("buy");
+  const [qty, setQty] = useState("1");
+  const [limit, setLimit] = useState("");
+  const [tif] = useState("Day");
+  const [reason, setReason] = useState("Practice paper trade from the floor");
+
+  const [chartTf, setChartTf] = useState<"1Day" | "1Month">("1Day");
+  const [bars, setBars] = useState<ChartBar[]>([]);
+  const [barsSource, setBarsSource] = useState<string | null>(null);
+  const [barsAt, setBarsAt] = useState<string | null>(null);
+  const [barsLoading, setBarsLoading] = useState(false);
+  const [barsError, setBarsError] = useState<string | null>(null);
 
   const flashCelebrate = useCallback((msg: string, ms = 1600) => {
     setCelebrate(msg);
     window.setTimeout(() => setCelebrate(null), ms);
   }, []);
 
-  const [symbol, setSymbol] = useState("AAPL");
-  const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [qty, setQty] = useState("1");
-  const [limit, setLimit] = useState("");
-  const [reason, setReason] = useState("Practice paper trade from the floor");
-
   const refresh = useCallback(async () => {
     if (!signedIn) return;
     setError(null);
     try {
-      const [p, o] = await Promise.all([portfolio(), listOrders()]);
+      const [p, o, s] = await Promise.all([
+        portfolio(),
+        listOrders(),
+        marketSession().catch(() => null),
+      ]);
       setAccount(p.account);
       setPositions(p.positions || []);
       setOrders(o.orders || []);
+      if (s) setSession({ us_rth_open: s.us_rth_open, label: s.label });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load book");
     }
@@ -196,6 +212,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
         };
       }
       setQuotes(map);
+      setQuotesAt(new Date().toISOString());
       setLimit((prev) => {
         if (prev.trim()) return prev;
         return map[symbol.toUpperCase()]?.price || prev;
@@ -204,6 +221,26 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
       /* ignore */
     }
   }, [signedIn, watch, symbol]);
+
+  const refreshBars = useCallback(async () => {
+    if (!signedIn || !symbol) return;
+    setBarsLoading(true);
+    setBarsError(null);
+    try {
+      const res = await marketBars(symbol, chartTf);
+      setBars(res.bars || []);
+      setBarsSource(res.source || null);
+      setBarsAt(res.fetched_at || new Date().toISOString());
+      if (res.error && !(res.bars || []).length) {
+        setBarsError(res.error);
+      }
+    } catch (e) {
+      setBars([]);
+      setBarsError(e instanceof Error ? e.message : "Bars unavailable");
+    } finally {
+      setBarsLoading(false);
+    }
+  }, [signedIn, symbol, chartTf]);
 
   useEffect(() => {
     void (async () => {
@@ -219,8 +256,17 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   }, [refresh, refreshQuotes]);
 
   useEffect(() => {
+    void refreshBars();
+  }, [refreshBars]);
+
+  useEffect(() => {
     if (!signedIn) return;
-    const t = setInterval(() => void refreshQuotes(), 30_000);
+    const t = setInterval(() => {
+      void refreshQuotes();
+      void marketSession()
+        .then((s) => setSession({ us_rth_open: s.us_rth_open, label: s.label }))
+        .catch(() => null);
+    }, 30_000);
     return () => clearInterval(t);
   }, [signedIn, refreshQuotes]);
 
@@ -229,7 +275,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const bp = account?.buying_power || cash;
   const dayPnl = account?.day_pnl;
   const dayPnlPct = account?.day_pnl_pct;
-  const selectedPx = quotes[symbol.toUpperCase()]?.price;
+  const openPnl = useMemo(() => {
+    return positions.reduce((sum, p) => sum + (Number(p.unrealized_pl) || 0), 0);
+  }, [positions]);
+  const selected = quotes[symbol.toUpperCase()];
+  const selectedPx = selected?.price;
 
   const notionalPreview = useMemo(() => {
     const q = Number(qty);
@@ -286,7 +336,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   async function onReset() {
     if (
       !confirm(
-        "Reset paper book to $100,000 virtual cash?\n\nPositions and open paper orders clear. This is NOT real money."
+        "Reset paper book to $100,000 virtual cash?\n\nPositions clear. This is NOT real money."
       )
     ) {
       return;
@@ -306,113 +356,122 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     }
   }
 
+  const asOf = quotesAt
+    ? new Date(quotesAt).toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : "—";
+
   return (
     <main className="relative min-h-screen pb-4 sm:pb-12">
       {celebrate && (
         <div className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center px-4 pt-20 animate-pulse sm:pt-24">
-          <span className="rounded-2xl border border-good/40 bg-ink/90 px-4 py-3 text-center text-base font-semibold text-good shadow-xl backdrop-blur-md sm:px-5 sm:text-2xl">
+          <span className="rounded-2xl border border-good/40 bg-ink/90 px-4 py-3 text-center text-base font-semibold text-good shadow-xl backdrop-blur-md sm:text-2xl">
             {celebrate}
           </span>
         </div>
       )}
 
-      {/* Sticky paper bar */}
-      <div className="sticky top-0 z-30 border-b border-good/30 bg-good/10 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-2.5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-good sm:text-xs">
+      {/* Phase 1 chrome bar */}
+      <div className="sticky top-0 z-30 border-b border-good/30 bg-panel/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/50 bg-good/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-good">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
               Paper only
             </span>
-            <span className="hidden text-xs text-mist sm:inline sm:text-sm">
-              Simulated fills · real symbols · not a live brokerage
+            {session && (
+              <span
+                className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
+                  session.us_rth_open
+                    ? "border-good/40 text-good"
+                    : "border-line text-mist"
+                }`}
+              >
+                {session.label}
+              </span>
+            )}
+            <span className="hidden font-mono text-[10px] text-mist sm:inline">
+              Quotes as of {asOf}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void refresh();
+                void refreshQuotes();
+                void refreshBars();
+              }}
+              className="min-h-9 rounded-full border border-line px-3 py-1.5 text-xs text-mist hover:text-white"
+            >
+              Refresh
+            </button>
             <button
               type="button"
               onClick={() => setShowFaq((v) => !v)}
               className="min-h-9 rounded-full border border-line px-3 py-1.5 text-xs text-mist hover:text-white"
             >
-              {showFaq ? "Hide tips" : "Tips"}
+              {showFaq ? "Hide" : "Tips"}
             </button>
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-5">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5 sm:gap-4">
-          <div className="min-w-0">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
             <p className="hud-label mb-1">Trade floor</p>
             <h1 className="bridge-title text-xl font-bold tracking-tight sm:text-3xl">
               Practice before real money
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-mist">
-              Tap symbol → size → review → confirm. Paper fills only — build
-              skill here first.
-              <span className="hidden sm:inline">
-                {" "}
-                Research with Grok on the{" "}
-                <a href="/" className="text-accent hover:underline">
-                  AI Desk
-                </a>
-                .
-              </span>
+            <p className="mt-1 text-sm text-mist">
+              Pick a symbol → chart → ticket → confirm. Paper fills only.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void refresh();
-                void refreshQuotes();
-              }}
-              className="min-h-10 rounded-full border border-line px-4 py-2 text-xs font-medium text-slate-300 hover:border-accent/40"
-            >
-              Refresh
-            </button>
-            <button
-              type="button"
-              disabled={resetBusy}
-              onClick={() => void onReset()}
-              className="min-h-10 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn hover:bg-warn/20 disabled:opacity-50"
-            >
-              {resetBusy ? "Resetting…" : "Reset $100k"}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={resetBusy}
+            onClick={() => void onReset()}
+            className="min-h-10 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn disabled:opacity-50"
+          >
+            {resetBusy ? "Resetting…" : "Reset $100k"}
+          </button>
         </div>
 
         {showFaq && (
-          <div className="mb-4 grid gap-3 rounded-2xl border border-line/80 bg-panel/50 p-4 sm:grid-cols-3">
-            <Tip
-              title="Why paper?"
-              body="Try stocks without funds, learn the ticket safely, or test a strategy before real capital."
-            />
-            <Tip
-              title="How fills work"
-              body="After you confirm, PaperSim fills against the limit/mark. Not a full exchange matching engine — practice, not perfection."
-            />
-            <Tip
-              title="AI + you"
-              body="Chat on AI Desk for research proposals. This floor is manual tickets. Both use policy + confirm."
-            />
+          <div className="mb-4 grid gap-2 rounded-xl border border-line/80 bg-panel/50 p-3 text-xs text-mist sm:grid-cols-3">
+            <p>
+              <strong className="text-slate-200">Paper</strong> — practice desk,
+              not a live broker.
+            </p>
+            <p>
+              <strong className="text-slate-200">Chart</strong> — honest bars only;
+              no fake data.
+            </p>
+            <p>
+              <strong className="text-slate-200">Confirm</strong> — policy + you
+              approve every fill.
+            </p>
           </div>
         )}
 
         {error && (
-          <div className="mb-4 rounded-xl border border-bad/40 bg-bad/10 px-4 py-3 text-sm text-bad">
+          <div className="mb-3 rounded-xl border border-bad/40 bg-bad/10 px-4 py-3 text-sm text-bad">
             {error}
           </div>
         )}
         {flash && (
-          <div className="mb-4 rounded-xl border border-good/40 bg-good/10 px-4 py-3 text-sm text-good">
+          <div className="mb-3 rounded-xl border border-good/40 bg-good/10 px-4 py-3 text-sm text-good">
             {flash}
           </div>
         )}
 
-        {/* Account strip — 2 cols phone, 5 desktop; Day P&L spans on phone */}
+        {/* Account strip */}
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
-          <Stat label="Equity" value={loading ? "…" : fmtMoney(equity)} />
+          <Stat label="Net liq" value={loading ? "…" : fmtMoney(equity)} />
           <Stat label="Cash" value={loading ? "…" : fmtMoney(cash)} />
           <Stat label="Buying power" value={loading ? "…" : fmtMoney(bp)} />
           <Stat
@@ -420,59 +479,65 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             value={
               loading
                 ? "…"
-                : `${fmtMoney(dayPnl)}${dayPnlPct != null ? ` (${fmtPct(dayPnlPct) || dayPnlPct + "%"})` : ""}`
+                : `${fmtMoney(dayPnl)}${
+                    dayPnlPct != null
+                      ? ` (${fmtPct(dayPnlPct) || dayPnlPct + "%"})`
+                      : ""
+                  }`
             }
             valueClass={pnlClass(dayPnl)}
           />
           <Stat
-            label="Positions"
-            value={loading ? "…" : String(positions.length)}
+            label="Open P&L"
+            value={loading ? "…" : fmtMoney(openPnl)}
+            valueClass={pnlClass(openPnl)}
             className="col-span-2 sm:col-span-1"
           />
         </div>
 
-        {/* Phone: ticket first (order-1), then watchlist, then positions */}
+        {/*
+          Desktop: watchlist | chart+ticket | blotter
+          Mobile order: chart+ticket first, watchlist, blotter
+        */}
         <div className="grid gap-4 lg:grid-cols-12">
           {/* Watchlist */}
-          <section className="hud-panel order-2 lg:order-none lg:col-span-4">
-            <div className="mb-3 flex items-center justify-between">
+          <section className="hud-panel order-2 lg:order-1 lg:col-span-3">
+            <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Watchlist</h2>
-              <span className="font-mono text-xs uppercase text-mist">
-                live-ish
-              </span>
+              <span className="font-mono text-[10px] text-mist">Last · Chg%</span>
+            </div>
+            <div className="mb-1 grid grid-cols-[1fr_auto_auto] gap-2 px-1 font-mono text-[10px] uppercase text-mist">
+              <span>Sym</span>
+              <span className="text-right">Last</span>
+              <span className="w-16 text-right">Chg%</span>
             </div>
             <ul className="divide-y divide-line/60">
               {watch.map((sym) => {
                 const q = quotes[sym];
                 const active = symbol.toUpperCase() === sym;
                 const pct = fmtPct(q?.change_percent);
-                const up = Number(q?.change) > 0 || Number(q?.change_percent) > 0;
-                const down = Number(q?.change) < 0 || Number(q?.change_percent) < 0;
                 return (
                   <li key={sym}>
                     <button
                       type="button"
                       onClick={() => pickSymbol(sym)}
-                      className={`flex w-full items-center justify-between gap-2 px-2 py-2.5 text-left transition ${
-                        active ? "bg-accent/10 ring-1 ring-inset ring-accent/30" : "hover:bg-white/5"
+                      className={`grid w-full grid-cols-[1fr_auto_auto] items-center gap-2 px-1 py-2.5 text-left transition ${
+                        active
+                          ? "bg-accent/10 ring-1 ring-inset ring-accent/30"
+                          : "hover:bg-white/5"
                       }`}
                     >
                       <span className="font-mono text-sm font-bold text-white">
                         {sym}
                       </span>
-                      <span className="text-right">
-                        <span className="block font-mono text-sm text-slate-200">
-                          {q?.ok ? fmtPx(q.price) : "…"}
-                        </span>
-                        {pct && (
-                          <span
-                            className={`font-mono text-xs ${
-                              up ? "text-good" : down ? "text-bad" : "text-mist"
-                            }`}
-                          >
-                            {pct}
-                          </span>
-                        )}
+                      <span className="font-mono text-sm text-slate-200">
+                        {q?.ok ? fmtPx(q.price) : "…"}
+                      </span>
+                      <span
+                        className="w-16 text-right font-mono text-xs font-semibold"
+                        style={{ color: chgColor(q?.change_percent) }}
+                      >
+                        {pct ?? "—"}
                       </span>
                     </button>
                   </li>
@@ -495,252 +560,286 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             >
               <input
                 name="add"
-                placeholder="Add TICKER"
-                className="hud-input flex-1 rounded-lg px-3 py-2 font-mono text-sm uppercase"
+                placeholder="Add"
+                className="hud-input min-h-10 flex-1 rounded-lg px-3 py-2 font-mono text-sm uppercase"
                 maxLength={8}
               />
               <button
                 type="submit"
-                className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent"
+                className="min-h-10 rounded-lg border border-accent/40 px-3 text-xs font-semibold text-accent"
               >
                 Add
               </button>
             </form>
           </section>
 
-          {/* Order ticket — first on phone for the AAPL loop */}
-          <section className="hud-panel order-1 lg:order-none lg:col-span-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-white">Order ticket</h2>
-              <span className="rounded-full border border-good/30 bg-good/10 px-2 py-0.5 font-mono text-xs font-bold text-good">
-                PAPER
-              </span>
-            </div>
-            <form onSubmit={onReviewOrder} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSide("buy")}
-                  className={`rounded-xl py-3 text-sm font-bold uppercase tracking-wide transition ${
-                    side === "buy"
-                      ? "bg-good text-ink shadow-lg shadow-good/20"
-                      : "border border-line text-mist hover:border-good/40"
-                  }`}
-                >
-                  Buy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSide("sell")}
-                  className={`rounded-xl py-3 text-sm font-bold uppercase tracking-wide transition ${
-                    side === "sell"
-                      ? "bg-bad text-white shadow-lg shadow-bad/20"
-                      : "border border-line text-mist hover:border-bad/40"
-                  }`}
-                >
-                  Sell
-                </button>
-              </div>
-              <label className="block">
-                <span className="mb-1 block font-mono text-xs uppercase text-mist">
-                  Symbol
-                </span>
-                <input
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                  className="hud-input w-full rounded-xl px-3 py-3 font-mono text-lg font-bold uppercase"
-                  required
-                  maxLength={8}
-                />
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block">
-                  <span className="mb-1 block font-mono text-xs uppercase text-mist">
-                    Qty
-                  </span>
-                  <input
-                    value={qty}
-                    onChange={(e) => setQty(e.target.value)}
-                    className="hud-input w-full rounded-xl px-3 py-2.5 font-mono text-sm"
-                    inputMode="decimal"
-                    required
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block font-mono text-xs uppercase text-mist">
-                    Limit $
-                  </span>
-                  <input
-                    value={limit}
-                    onChange={(e) => setLimit(e.target.value)}
-                    placeholder={selectedPx || "0.00"}
-                    className="hud-input w-full rounded-xl px-3 py-2.5 font-mono text-sm"
-                    inputMode="decimal"
-                    required
-                  />
-                </label>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {QUICK_QTY.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => setQty(q)}
-                    className={`rounded-full px-2.5 py-1 font-mono text-xs ${
-                      qty === q
-                        ? "bg-accent/20 text-accent"
-                        : "border border-line text-mist hover:border-accent/40"
-                    }`}
-                  >
-                    {q} sh
-                  </button>
-                ))}
-                {maxShares != null && maxShares > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setQty(String(maxShares))}
-                    className="rounded-full border border-good/40 px-2.5 py-1 font-mono text-xs text-good hover:bg-good/10"
-                  >
-                    Max {maxShares}
-                  </button>
-                )}
-              </div>
-              <label className="block">
-                <span className="mb-1 block font-mono text-xs uppercase text-mist">
-                  Why this trade? (policy requires a reason)
-                </span>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={2}
-                  className="hud-input w-full rounded-xl px-3 py-2 text-sm"
-                  required
-                  placeholder="e.g. Practice breakout entry on AAPL"
-                />
-              </label>
-              <div className="rounded-xl border border-line/60 bg-ink/40 px-3 py-2 font-mono text-xs text-mist">
-                {notionalPreview != null ? (
-                  <>
-                    Est.{" "}
-                    <span className="text-slate-200">{fmtMoney(notionalPreview)}</span>
-                    {selectedPx && (
-                      <>
-                        {" "}
-                        · last{" "}
-                        <span className="text-slate-200">{fmtPx(selectedPx)}</span>
-                      </>
-                    )}
-                    {maxShares != null && side === "buy" && (
-                      <>
-                        {" "}
-                        · max ~{maxShares} sh
-                      </>
-                    )}
-                  </>
-                ) : (
-                  "Enter qty + limit to see estimated cost"
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={busy}
-                className="hud-btn-primary min-h-12 w-full rounded-xl py-3.5 text-base font-bold disabled:opacity-50"
-              >
-                {busy ? "Checking policy…" : "Review order →"}
-              </button>
-              <p className="text-center text-xs leading-relaxed text-mist">
-                Nothing fills until you confirm. PaperSim only.
-              </p>
-            </form>
-          </section>
-
-          {/* Positions + fills */}
-          <section className="order-3 flex flex-col gap-4 lg:order-none lg:col-span-4">
-            <div className="hud-panel flex-1">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">Positions</h2>
-                <span className="font-mono text-xs text-mist">tap to trade</span>
-              </div>
-              {positions.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-line/80 px-4 py-8 text-center">
-                  <p className="text-2xl">📭</p>
-                  <p className="mt-2 text-sm font-medium text-slate-300">
-                    No positions yet
-                  </p>
-                  <p className="mt-1 text-xs text-mist">
-                    Pick AAPL on the left, buy 1 share, confirm. You&apos;ve got this.
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="font-mono text-xs uppercase text-mist">
-                      <tr>
-                        <th className="pb-2 pr-2">Sym</th>
-                        <th className="pb-2 pr-2">Qty</th>
-                        <th className="pb-2 pr-2">Avg</th>
-                        <th className="pb-2 pr-2">Mark</th>
-                        <th className="pb-2">P&amp;L</th>
-                      </tr>
-                    </thead>
-                    <tbody className="font-mono text-slate-200">
-                      {positions.map((p) => (
-                        <tr
-                          key={p.symbol}
-                          className="cursor-pointer border-t border-line/50 hover:bg-white/5"
-                          onClick={() => {
-                            pickSymbol(p.symbol);
-                            setSide("sell");
-                          }}
-                        >
-                          <td className="py-2.5 pr-2 font-bold text-white">
-                            {p.symbol}
-                          </td>
-                          <td className="py-2.5 pr-2">{p.qty}</td>
-                          <td className="py-2.5 pr-2">{fmtPx(p.avg_entry_price)}</td>
-                          <td className="py-2.5 pr-2">{fmtPx(p.current_price)}</td>
-                          <td className={`py-2.5 ${pnlClass(p.unrealized_pl)}`}>
-                            {fmtMoney(p.unrealized_pl)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+          {/* Center: chart above ticket */}
+          <section className="order-1 flex flex-col gap-4 lg:order-2 lg:col-span-5">
+            <SymbolChart
+              symbol={symbol.toUpperCase()}
+              bars={bars}
+              timeframe={chartTf}
+              onTimeframe={setChartTf}
+              source={barsSource}
+              fetchedAt={barsAt}
+              loading={barsLoading}
+              error={barsError}
+              lastPrice={selectedPx}
+              changePercent={selected?.change_percent}
+            />
 
             <div className="hud-panel">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-white">Recent fills</h2>
-                <span className="font-mono text-xs text-mist">paper</span>
+                <h2 className="text-sm font-semibold text-white">Order ticket</h2>
+                <span className="rounded-full border border-good/30 bg-good/10 px-2 py-0.5 font-mono text-[10px] font-bold text-good">
+                  PAPER
+                </span>
               </div>
-              {orders.length === 0 ? (
-                <p className="text-sm text-mist">
-                  Confirmed tickets show up here as paper fills.
+              <form onSubmit={onReviewOrder} className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSide("buy")}
+                    className={`min-h-12 rounded-xl py-3 text-sm font-bold uppercase ${
+                      side === "buy"
+                        ? "bg-good text-ink"
+                        : "border border-line text-mist"
+                    }`}
+                  >
+                    Buy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSide("sell")}
+                    className={`min-h-12 rounded-xl py-3 text-sm font-bold uppercase ${
+                      side === "sell"
+                        ? "bg-bad text-white"
+                        : "border border-line text-mist"
+                    }`}
+                  >
+                    Sell
+                  </button>
+                </div>
+                <label className="block">
+                  <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                    Symbol
+                  </span>
+                  <input
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                    className="hud-input w-full rounded-xl px-3 py-3 font-mono text-lg font-bold uppercase"
+                    required
+                    maxLength={8}
+                  />
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="block">
+                    <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                      Qty
+                    </span>
+                    <input
+                      value={qty}
+                      onChange={(e) => setQty(e.target.value)}
+                      className="hud-input w-full rounded-xl px-3 py-2.5 font-mono text-sm"
+                      inputMode="decimal"
+                      required
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                      Limit
+                    </span>
+                    <input
+                      value={limit}
+                      onChange={(e) => setLimit(e.target.value)}
+                      placeholder={selectedPx || "0.00"}
+                      className="hud-input w-full rounded-xl px-3 py-2.5 font-mono text-sm"
+                      inputMode="decimal"
+                      required
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                      TIF
+                    </span>
+                    <div className="hud-input flex min-h-[42px] items-center rounded-xl px-3 font-mono text-sm text-slate-300">
+                      {tif}
+                    </div>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {QUICK_QTY.map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      onClick={() => setQty(q)}
+                      className={`min-h-9 rounded-full px-2.5 py-1 font-mono text-[11px] ${
+                        qty === q
+                          ? "bg-accent/20 text-accent"
+                          : "border border-line text-mist"
+                      }`}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                  {maxShares != null && maxShares > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setQty(String(maxShares))}
+                      className="min-h-9 rounded-full border border-good/40 px-2.5 font-mono text-[11px] text-good"
+                    >
+                      Max {maxShares}
+                    </button>
+                  )}
+                </div>
+                <label className="block">
+                  <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                    Reason (required)
+                  </span>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={2}
+                    className="hud-input w-full rounded-xl px-3 py-2 text-sm"
+                    required
+                  />
+                </label>
+                <p className="font-mono text-xs text-mist">
+                  {notionalPreview != null ? (
+                    <>Est. {fmtMoney(notionalPreview)} · Limit · TIF Day · paper</>
+                  ) : (
+                    "Enter qty + limit"
+                  )}
                 </p>
-              ) : (
-                <ul className="max-h-48 space-y-2 overflow-y-auto">
-                  {[...orders]
-                    .reverse()
-                    .slice(0, 12)
-                    .map((o) => (
-                      <li
-                        key={String(o.id || o.client_order_id)}
-                        className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2 font-mono text-xs text-slate-300"
-                      >
-                        <span className="font-semibold text-good">
-                          {String(o.status || "order")}
-                        </span>
-                        {o.broker_order_id != null && (
-                          <span className="text-mist">
-                            {" "}
-                            · {String(o.broker_order_id).slice(0, 18)}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                </ul>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="hud-btn-primary min-h-12 w-full rounded-xl py-3.5 text-base font-bold disabled:opacity-50"
+                >
+                  {busy ? "Checking policy…" : "Review paper order →"}
+                </button>
+              </form>
+            </div>
+          </section>
+
+          {/* Blotter */}
+          <section className="order-3 lg:order-3 lg:col-span-4">
+            <div className="hud-panel">
+              <div className="mb-3 flex gap-1 rounded-full border border-line p-0.5">
+                {(
+                  [
+                    ["positions", "Positions"],
+                    ["orders", "Orders"],
+                    ["fills", "Fills"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setBlotter(id)}
+                    className={`min-h-9 flex-1 rounded-full px-2 py-1 text-xs font-semibold ${
+                      blotter === id
+                        ? "bg-ink text-white"
+                        : "text-mist hover:text-white"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {blotter === "positions" && (
+                <>
+                  {positions.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-mist">
+                      No positions — pick a symbol, review, confirm.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead className="font-mono text-[10px] uppercase text-mist">
+                          <tr>
+                            <th className="pb-2">Sym</th>
+                            <th className="pb-2">Qty</th>
+                            <th className="pb-2">Avg</th>
+                            <th className="pb-2">Mark</th>
+                            <th className="pb-2">P&amp;L</th>
+                          </tr>
+                        </thead>
+                        <tbody className="font-mono">
+                          {positions.map((p) => (
+                            <tr
+                              key={p.symbol}
+                              className="cursor-pointer border-t border-line/50 hover:bg-white/5"
+                              onClick={() => {
+                                pickSymbol(p.symbol);
+                                setSide("sell");
+                              }}
+                            >
+                              <td className="py-2 font-bold text-white">
+                                {p.symbol}
+                              </td>
+                              <td className="py-2 text-slate-200">{p.qty}</td>
+                              <td className="py-2 text-slate-200">
+                                {fmtPx(p.avg_entry_price)}
+                              </td>
+                              <td className="py-2 text-slate-200">
+                                {fmtPx(p.current_price)}
+                              </td>
+                              <td className={`py-2 ${pnlClass(p.unrealized_pl)}`}>
+                                {fmtMoney(p.unrealized_pl)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {blotter === "orders" && (
+                <p className="py-6 text-center text-sm text-mist">
+                  Working orders arrive in Phase 3. v1 fills instantly after
+                  confirm (paper).
+                </p>
+              )}
+
+              {blotter === "fills" && (
+                <>
+                  {orders.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-mist">
+                      No paper fills yet.
+                    </p>
+                  ) : (
+                    <ul className="max-h-72 space-y-2 overflow-y-auto">
+                      {[...orders]
+                        .reverse()
+                        .slice(0, 40)
+                        .map((o) => (
+                          <li
+                            key={String(o.id || o.client_order_id)}
+                            className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2 font-mono text-[11px] text-slate-300"
+                          >
+                            <span className="font-semibold text-good">
+                              {String(o.status || "filled")}
+                            </span>
+                            {o.broker_order_id != null && (
+                              <span className="text-mist">
+                                {" "}
+                                · {String(o.broker_order_id).slice(0, 16)}
+                              </span>
+                            )}
+                            {o.created_at != null && (
+                              <div className="text-mist">
+                                {String(o.created_at).slice(0, 19)}
+                              </div>
+                            )}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </>
               )}
             </div>
           </section>
@@ -757,11 +856,13 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               updated?.policy_status === "filled"
             ) {
               const msg = `Paper fill: ${updated.side} ${updated.qty} ${updated.symbol} 🎯`;
-              setFlash(`${msg} — check positions below.`);
+              setFlash(`${msg} — check Positions.`);
               flashCelebrate(msg);
+              setBlotter("fills");
             }
             void refresh();
             void refreshQuotes();
+            void refreshBars();
           }}
         />
       )}
@@ -784,7 +885,7 @@ function Stat({
     <div
       className={`rounded-xl border border-line/70 bg-panel/60 px-3 py-3 ${className}`}
     >
-      <p className="font-mono text-xs uppercase tracking-wider text-mist">
+      <p className="font-mono text-[10px] uppercase tracking-wider text-mist">
         {label}
       </p>
       <p
@@ -794,15 +895,6 @@ function Stat({
       >
         {value}
       </p>
-    </div>
-  );
-}
-
-function Tip({ title, body }: { title: string; body: string }) {
-  return (
-    <div>
-      <p className="text-xs font-semibold text-white">{title}</p>
-      <p className="mt-1 text-sm leading-relaxed text-mist">{body}</p>
     </div>
   );
 }

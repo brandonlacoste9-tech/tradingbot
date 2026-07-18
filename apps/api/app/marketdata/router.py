@@ -85,11 +85,16 @@ async def get_bars(
             continue
         try:
             bars = await fn(symbol, timeframe=timeframe, limit=limit)
-            if bars.get("bars"):
+            got = list(bars.get("bars") or [])
+            # Chart + multi-day views need real series; single prev-close is not enough
+            # when the caller asked for a lookback (limit > 1). Fall through to next
+            # provider (e.g. Yahoo free daily history) instead of a one-bar dead end.
+            min_needed = 1 if limit <= 1 else 2
+            if len(got) >= min_needed:
                 if errors:
                     bars["fallback_errors"] = errors
                 return bars
-            errors.append(f"{name}: empty bars")
+            errors.append(f"{name}: insufficient bars ({len(got)})")
         except Exception as e:  # noqa: BLE001
             errors.append(f"{name}: {e}")
     raise RuntimeError("; ".join(errors) or "No market data provider configured")

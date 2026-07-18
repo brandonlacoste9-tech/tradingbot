@@ -2,7 +2,7 @@
 
 **Product:** IndieTrades · https://indietrades.com  
 **Surface:** `/trade` (paper trading floor)  
-**Status:** Decisions locked (2026-07-18) — build when owner says go  
+**Status:** Phase 1 + Phase 2 shipping — stop and feel before Phase 3  
 **Date:** 2026-07-18  
 
 **Owner intent:** Make `/trade` look and feel like a real stock trading screen, while staying **paper-only**, with **policy + human confirm**, and optional **Grok research** on AI Desk.
@@ -102,13 +102,13 @@ Chart sits **above the ticket** in the center column (not full-width under heade
 
 **Goal:** Looks like a desk even before the chart is perfect.
 
-- [ ] Denser account header (real vocabulary: Net liq / Cash / BP / Day P&L / Open P&L)  
-- [ ] **As-of** / last quote refresh timestamp  
-- [ ] US session indicator (RTH open/closed) — align with existing policy hours  
-- [ ] Watchlist columns: Symbol · Last · Chg · Chg% (flash on update optional)  
-- [ ] Ticket: TIF Day (UI even if sim is simple at first); clear **Review paper order**  
-- [ ] Blotter tabs: **Positions | Orders | Fills** with broker-like row labels  
-- [ ] Keep preflight modal (policy + TTL + confirm)  
+- [x] Denser account header (real vocabulary: Net liq / Cash / BP / Day P&L / Open P&L)  
+- [x] **As-of** / last quote refresh timestamp  
+- [x] US session indicator (RTH open/closed) — align with existing policy hours  
+- [x] Watchlist columns: Symbol · Last · Chg% (Chg optional later; flash optional)  
+- [x] Ticket: TIF Day (UI even if sim is simple at first); clear **Review paper order**  
+- [x] Blotter tabs: **Positions | Orders | Fills** with broker-like row labels  
+- [x] Keep preflight modal (policy + TTL + confirm)  
 
 ### Phase 2 — Red/green chart on symbol pick ⭐ team favorite
 
@@ -124,15 +124,15 @@ Chart sits **above the ticket** in the center column (not full-width under heade
 
 **Chart scope for v1:**
 
-- [ ] Renders when user selects a symbol from watchlist  
-- [ ] Timeframes: **1D primary + 1M toggle** day one  
-- [ ] Large last price + day change % above chart  
-- [ ] Data from existing market cascade (FMP / etc.; Yahoo unofficial fallback)  
-- [ ] Loading / empty / error states (don’t show a fake chart)  
-- [ ] Source + age badge: e.g. `FMP · 12s ago`  
-- [ ] Mobile: chart height capped; doesn’t push ticket off forever  
-- [ ] Up/down color: **pure green / pure red** for series; brand accent reserved for PAPER badge and chrome  
-- [ ] Always show +/− and % text (not color-only)  
+- [x] Renders when user selects a symbol from watchlist  
+- [x] Timeframes: **1D primary + 1M toggle** day one  
+- [x] Large last price + day change % above chart  
+- [x] Data from existing market cascade (FMP / etc.; Yahoo unofficial fallback)  
+- [x] Loading / empty / error states (don’t show a fake chart)  
+- [x] Source + age badge: e.g. `FMP · 12s ago`  
+- [x] Mobile: chart height capped; doesn’t push ticket off forever  
+- [x] Up/down color: **pure green / pure red** for series; brand accent reserved for PAPER badge and chrome  
+- [x] Always show +/− and % text (not color-only)  
 
 **Out of Phase 2:** drawings, 50 indicators, multi-pane, Level 2, options chain.
 
@@ -235,4 +235,4 @@ See §12 Decision log.
 
 ---
 
-**Status:** Decisions locked. **Say the word to build** (Phase 1 chrome + Phase 2 chart).
+**Status:** Decisions locked. **Phase 1 + Phase 2 implemented** — stop and feel on `/trade` before Phase 3.
