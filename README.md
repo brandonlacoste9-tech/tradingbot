@@ -1,8 +1,12 @@
 # tradingbot
 
-**L2 paper-trading AI dashboard** — Claude-style agent orchestration over **Alpaca paper trading**.
+**L2 paper-trading AI dashboard** — Claude-style agent orchestration: **AI researches the web**, policy gates risk, human confirms, broker executes (paper-first).
+
+> **Agents / Grok:** read [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) for full product context, Canada/IBKR constraints, deploy URLs, and next steps.
 
 Repo: [brandonlacoste9-tech/tradingbot](https://github.com/brandonlacoste9-tech/tradingbot)
+
+**Owner constraint:** Canadian residents cannot use Alpaca. Execution path is pivoting to **Interactive Brokers Canada (paper)**.
 
 Control plane (enforced):
 
