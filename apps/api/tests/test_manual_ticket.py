@@ -86,3 +86,41 @@ def test_manual_ticket_no_submit_without_confirm():
     # Fresh paper book — no SPY position until confirm
     positions = port.json()["positions"]
     assert not any(p["symbol"] == "SPY" for p in positions)
+
+
+def test_paper_reset_clears_book():
+    client = TestClient(app)
+    headers = {"X-User-Id": "test-paper-reset"}
+    # Buy
+    r = client.post(
+        "/proposals/create",
+        headers=headers,
+        json={
+            "symbol": "AAPL",
+            "side": "buy",
+            "qty": "2",
+            "order_type": "limit",
+            "limit_price": "190",
+            "reason": "Then reset",
+        },
+    )
+    assert r.status_code == 200
+    pid = r.json()["proposal"]["id"]
+    c = client.post(
+        "/proposals/confirm", headers=headers, json={"proposal_id": pid}
+    )
+    assert c.status_code == 200
+    # Reset
+    z = client.post(
+        "/paper/reset",
+        headers=headers,
+        json={"starting_cash": 100000},
+    )
+    assert z.status_code == 200, z.text
+    assert z.json()["ok"] is True
+    port = client.get("/portfolio", headers=headers)
+    assert port.status_code == 200
+    body = port.json()
+    assert body["positions"] == []
+    assert float(body["account"]["cash"]) == 100000.0
+    assert "day_pnl" in body["account"]

@@ -216,7 +216,10 @@ export function marketQuotes(symbols: string[]) {
   return req<{
     quotes: {
       symbol: string;
+      name?: string | null;
       price: string | null;
+      change?: string | null;
+      change_percent?: string | null;
       source: string | null;
       ok: boolean;
       error?: string;
@@ -229,6 +232,18 @@ export function listOrders() {
   return req<{ orders: Record<string, unknown>[]; user_id?: string }>("/orders");
 }
 
+export function paperReset(starting_cash: number = 100_000) {
+  return req<{
+    ok: boolean;
+    account: Record<string, string>;
+    message: string;
+    user_id: string;
+  }>("/paper/reset", {
+    method: "POST",
+    body: JSON.stringify({ starting_cash }),
+  });
+}
+
 export function portfolio() {
   return req<{
     account: Record<string, string> | null;
@@ -236,6 +251,9 @@ export function portfolio() {
     source: string;
     error?: string;
     user_id?: string;
+    paper?: boolean;
+    day_pnl?: string;
+    day_pnl_pct?: string;
   }>("/portfolio");
 }
 

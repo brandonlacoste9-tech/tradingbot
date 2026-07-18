@@ -7,6 +7,7 @@ import DisclaimerBanner from "@/components/DisclaimerBanner";
 import HowItWorks from "@/components/HowItWorks";
 import StatusStrip from "@/components/StatusStrip";
 import UserBar from "@/components/UserBar";
+import WhyPaper from "@/components/WhyPaper";
 import {
   billingStatus,
   health,
@@ -187,6 +188,7 @@ function HomePageBody({
 
       <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
         <HowItWorks />
+        <WhyPaper />
 
         <div className="grid gap-4 lg:grid-cols-12">
           <section className="min-h-[560px] lg:col-span-7 lg:h-[calc(100vh-12rem)]">

@@ -163,6 +163,12 @@ class CreateProposalRequest(BaseModel):
     )
 
 
+class PaperResetRequest(BaseModel):
+    """Reset PaperSim book to fresh virtual cash."""
+
+    starting_cash: float | int | str | None = 100_000
+
+
 class CheckoutRequest(BaseModel):
     success_url: str | None = None
     cancel_url: str | None = None
@@ -866,9 +872,18 @@ async def market_quote(
     if price is None:
         raise HTTPException(404, f"No quote for {sym}")
 
+    change = raw.get("change") if isinstance(raw, dict) else None
+    change_pct = None
+    if isinstance(raw, dict):
+        change_pct = raw.get("change_percent") or raw.get("changePercentage")
+    name = raw.get("name") if isinstance(raw, dict) else None
+
     return {
         "symbol": sym,
+        "name": name,
         "price": str(price.quantize(Decimal("0.01"))),
+        "change": str(change) if change is not None else None,
+        "change_percent": str(change_pct) if change_pct is not None else None,
         "source": source,
         "paper": True,
         "user_id": user.id,
@@ -894,7 +909,10 @@ async def market_quotes(
             out.append(
                 {
                     "symbol": one["symbol"],
+                    "name": one.get("name"),
                     "price": one["price"],
+                    "change": one.get("change"),
+                    "change_percent": one.get("change_percent"),
                     "source": one["source"],
                     "ok": True,
                 }
@@ -903,7 +921,10 @@ async def market_quotes(
             out.append(
                 {
                     "symbol": sym,
+                    "name": None,
                     "price": None,
+                    "change": None,
+                    "change_percent": None,
                     "source": None,
                     "ok": False,
                     "error": e.detail,
@@ -1419,6 +1440,9 @@ async def portfolio(user: Annotated[CurrentUser, Depends(get_current_user)]):
             "positions": positions,
             "source": getattr(client, "backend_name", "broker"),
             "user_id": user.id,
+            "paper": True,
+            "day_pnl": account.get("day_pnl"),
+            "day_pnl_pct": account.get("day_pnl_pct"),
         }
     except BrokerError as e:
         return {
@@ -1427,7 +1451,70 @@ async def portfolio(user: Annotated[CurrentUser, Depends(get_current_user)]):
             "source": "unavailable",
             "error": str(e),
             "user_id": user.id,
+            "paper": True,
         }
+
+
+@app.post("/paper/reset")
+async def paper_reset(
+    body: PaperResetRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """
+    Reset PaperSim to fresh virtual cash (default $100k).
+    Only available for BROKER_BACKEND=sim — never touches live brokers.
+    """
+    backend = (settings.broker_backend or "sim").lower().strip()
+    if backend != "sim":
+        raise HTTPException(
+            400,
+            "Paper reset only works with PaperSim (BROKER_BACKEND=sim).",
+        )
+    client = await _client_async(user.id)
+    if not hasattr(client, "reset"):
+        raise HTTPException(400, "Broker does not support paper reset")
+
+    try:
+        cash = Decimal(str(body.starting_cash if body.starting_cash is not None else 100_000))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"Invalid starting_cash: {e}") from e
+    if cash < Decimal("1000") or cash > Decimal("10000000"):
+        raise HTTPException(400, "starting_cash must be between 1,000 and 10,000,000")
+
+    client.reset(cash)
+    # Persist wiped state
+    try:
+        from app.db.repo import save_paper_state
+
+        st = client.export_state()
+        await save_paper_state(
+            user.id,
+            cash=st["cash"],
+            starting_cash=st["starting_cash"],
+            positions=st["positions"],
+            marks=st["marks"],
+            client_orders=st["client_orders"],
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    mem = await _mem(user)
+    jentry = mem.add_journal(
+        summary_md=f"**Paper book reset** to ${cash:,.0f} virtual cash. Fresh start.",
+        decisions=[{"type": "paper_reset", "starting_cash": str(cash)}],
+    )
+    ts = get_tenant_store()
+    await ts.persist_journal(user.id, jentry)
+    await ts.persist_audit(
+        user.id, "user", "paper_reset", {"starting_cash": str(cash)}
+    )
+    account = await client.get_account()
+    return {
+        "ok": True,
+        "account": account,
+        "message": f"Paper book reset to ${cash:,.0f}. Not real money.",
+        "user_id": user.id,
+    }
 
 
 # ---------- admin (PR4) — X-Admin-Key ----------

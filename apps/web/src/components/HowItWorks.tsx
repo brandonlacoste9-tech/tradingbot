@@ -1,10 +1,10 @@
 "use client";
 
 const STEPS = [
-  { n: "01", t: "Research", d: "Ask Grok for quotes, news, or ideas" },
-  { n: "02", t: "Propose", d: "It may suggest a paper limit order" },
-  { n: "03", t: "Policy", d: "Risk rules check size, cash, and limits" },
-  { n: "04", t: "Confirm", d: "You approve — then it fills on paper only" },
+  { n: "01", t: "Research", d: "Ask Grok — or open the Trade floor ticket" },
+  { n: "02", t: "Propose", d: "AI or you build a paper limit order" },
+  { n: "03", t: "Policy", d: "Risk rules check size, cash, and session" },
+  { n: "04", t: "Confirm", d: "You approve — PaperSim fills. No live money." },
 ];
 
 export default function HowItWorks() {
@@ -12,7 +12,15 @@ export default function HowItWorks() {
     <div className="hud-panel !py-3">
       <div className="hud-panel-header !mb-2 !border-0 !pb-0">
         <span className="hud-label">How it works</span>
-        <span className="text-[10px] text-mist">paper only</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-mist">paper only</span>
+          <a
+            href="/trade"
+            className="rounded-full border border-good/30 bg-good/10 px-2 py-0.5 text-[10px] font-semibold text-good hover:bg-good/20"
+          >
+            Trade floor
+          </a>
+        </div>
       </div>
       <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map((s, i) => (

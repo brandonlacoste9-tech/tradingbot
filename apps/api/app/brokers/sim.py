@@ -107,6 +107,11 @@ class PaperSimBroker:
             eq += pos["qty"] * self._mark(sym)
         return eq
 
+    def daily_pnl(self) -> Decimal:
+        """Dollar PnL vs session start equity (starting cash for this paper book)."""
+        with self._lock:
+            return self._equity() - self._equity_start
+
     def daily_pnl_pct(self) -> float:
         """PnL % vs session start equity (starting cash for this paper book)."""
         with self._lock:
@@ -115,6 +120,20 @@ class PaperSimBroker:
                 return 0.0
             eq = self._equity()
             return float(((eq - start) / start) * Decimal("100"))
+
+    def reset(self, starting_cash: Decimal | None = None) -> None:
+        """Wipe paper book — fresh virtual cash (Webull-style reset anytime)."""
+        cash = starting_cash if starting_cash is not None else Decimal("100000")
+        if cash <= 0:
+            cash = Decimal("100000")
+        with self._lock:
+            self._cash = cash
+            self._equity_start = cash
+            self._positions.clear()
+            self._orders_by_client.clear()
+            self._orders_by_id.clear()
+            self._marks = dict(_SEED_MARKS)
+            self._hydrated = True
 
     async def validate_connection(self) -> dict[str, Any]:
         account = await self.get_account()
@@ -126,6 +145,8 @@ class PaperSimBroker:
             "cash": account["cash"],
             "buying_power": account["buying_power"],
             "is_paper": True,
+            "day_pnl": account.get("day_pnl"),
+            "day_pnl_pct": account.get("day_pnl_pct"),
             "last_validated": datetime.now(timezone.utc).isoformat(),
             "backend": self.backend_name,
             "base_url": "sim://paper",
@@ -134,15 +155,24 @@ class PaperSimBroker:
     async def get_account(self) -> dict[str, Any]:
         with self._lock:
             eq = self._equity()
+            start = self._equity_start
+            day = eq - start
+            pct = (
+                float((day / start) * Decimal("100")) if start > 0 else 0.0
+            )
             return {
-                "id": "SIM-PAPER-001",
-                "account_number": "SIM-PAPER-001",
+                "id": f"SIM-{self.user_id or 'demo'}"[:32],
+                "account_number": f"SIM-{self.user_id or 'demo'}"[:32],
                 "status": "ACTIVE",
                 "equity": str(eq.quantize(Decimal("0.01"))),
                 "cash": str(self._cash.quantize(Decimal("0.01"))),
                 "buying_power": str(self._cash.quantize(Decimal("0.01"))),
                 "portfolio_value": str(eq.quantize(Decimal("0.01"))),
+                "starting_cash": str(start.quantize(Decimal("0.01"))),
+                "day_pnl": str(day.quantize(Decimal("0.01"))),
+                "day_pnl_pct": f"{pct:.2f}",
                 "currency": "USD",
+                "is_paper": True,
             }
 
     async def get_positions(self) -> list[dict[str, Any]]:
