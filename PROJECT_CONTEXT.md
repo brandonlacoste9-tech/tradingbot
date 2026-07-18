@@ -193,7 +193,7 @@ Default broker for SaaS: **PaperSim** (not multi-tenant live IBKR).
 
 10. [x] **Desk UX v1** — disclaimer, status/usage strip, how-it-works, chat chips, preflight  
 11. [x] **Clerk App Router UI** — provider, proxy/middleware, SignIn/Up, JWT → API (**live**)  
-12. [ ] **Postgres on Render** enabled (survive restarts)  
+12. [x] **Postgres on Render** enabled (`tradingbot-db`, SSL + IP allowlist)  
 13. [ ] Stripe end-to-end paid checkout in prod/test  
 14. [ ] Onboarding / risk persona polish  
 15. [ ] Owner optional: IBKR Gateway local; not SaaS default  

@@ -34,13 +34,19 @@ Schema is applied automatically via `init_pool()` on startup.
 
 ## Render / production
 
-1. Create **Render Postgres** (or Neon) and copy **Internal/External DATABASE_URL**
-2. Set on `tradingbot-api`:
+**Live (2026-07-18):** Render Postgres `tradingbot-db` (`dpg-d9dp8in7f7vs739674ig-a`, oregon, free) is linked to `tradingbot-api` via `DATABASE_URL`. Health reports `postgres: true` and `tenancy.backend: "postgres"`.
+
+Checklist for a fresh env:
+
+1. Create **Render Postgres** (or Neon) and copy **External DATABASE_URL** (free web services often use external + SSL).
+2. Open DB **IP allow list** to `0.0.0.0/0` (or the service egress) — empty allowlist blocks connections.
+3. Set on `tradingbot-api`:
    ```env
    DATABASE_URL=postgresql://...
    ```
-3. Redeploy API  
-4. Confirm `GET /health` → `"postgres": true`
+   API enables TLS automatically for `render.com` / Neon hosts (`app/db/pool.py`).
+4. Redeploy / restart API  
+5. Confirm `GET /health` → `"postgres": true`, `"tenancy": { "backend": "postgres" }`
 
 Do **not** set `DATABASE_URL_DISABLED=true` unless debugging memory-only mode.
 

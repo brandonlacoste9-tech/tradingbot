@@ -149,7 +149,7 @@ Cascade: **FMP → Alpha Vantage → Massive → sim**
 
 | Priority | Item |
 |----------|------|
-| P0 | Enable Render **Postgres** so paper books survive restarts |
+| P0 | ~~Enable Render **Postgres**~~ **DONE 2026-07-18** (`tradingbot-db`, `postgres: true`) |
 | P1 | Stripe **test/live** fully wired end-to-end for paying Pro |
 | P1 | Clerk allowed origins / production polish if any edge 401s |
 | P2 | Onboarding (disclaimer accept, risk persona) |
