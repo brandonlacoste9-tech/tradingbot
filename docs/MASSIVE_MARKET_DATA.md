@@ -8,11 +8,14 @@ Not brokers — orders still go through PaperSim / IBKR paper only.
 | Env | Provider | Best for |
 |-----|----------|----------|
 | `FMP_API_KEY` | [Financial Modeling Prep](https://financialmodelingprep.com/) | Quotes + multi-day EOD history (`/stable/*`) |
+| `ALPHA_VANTAGE_API_KEY` | [Alpha Vantage](https://www.alphavantage.co/) | News sentiment, quote/bars fallback, FX |
 | `MASSIVE_API_KEY` | [Massive](https://massive.com/) (Polygon host) | News, prev-close fallback |
 | `MASSIVE_BASE_URL` | default `https://api.polygon.io` | Compatible REST base |
 | `FMP_BASE_URL` | default `https://financialmodelingprep.com` | FMP base |
 
-**Cascade:** FMP → Massive → PaperSim/broker seed.
+**Cascade:**  
+- Quotes/bars: **FMP → Alpha Vantage → Massive → sim**  
+- News: **Alpha Vantage → Massive → FMP**
 
 **Never** reuse these keys as `ADMIN_API_KEY`.
 
@@ -55,7 +58,10 @@ GET /market/status   → provider probe (auth)
 
 ## Ops
 
-1. Set `FMP_API_KEY` and/or `MASSIVE_API_KEY` on **Render only**  
+1. Set `FMP_API_KEY`, `ALPHA_VANTAGE_API_KEY`, and/or `MASSIVE_API_KEY` on **Render only**  
 2. Keep a separate random `ADMIN_API_KEY` for kill switch  
-3. Confirm `GET /health` → `"fmp_configured": true`  
-4. Chat “quote AAPL” → `source: fmp` when FMP is set  
+3. Confirm `GET /health` → `"fmp_configured": true`, `"alphavantage_configured": true`  
+4. Chat “quote AAPL” → `source: fmp` when FMP is set; news often `source: alphavantage`  
+
+**Alpha Vantage free limits are tight** — FMP stays primary for quotes so we don’t burn the AV daily quota.  
+

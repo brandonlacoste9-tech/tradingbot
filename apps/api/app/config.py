@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     # FMP = Financial Modeling Prep (preferred for quotes + EOD history)
     fmp_api_key: str = ""
     fmp_base_url: str = "https://financialmodelingprep.com"
+    # Alpha Vantage — news sentiment + quote/bars fallback (tight free limits)
+    alpha_vantage_api_key: str = ""
     # Massive.com (Polygon-compatible) — news / prev close fallback
     massive_api_key: str = ""
     massive_base_url: str = "https://api.polygon.io"

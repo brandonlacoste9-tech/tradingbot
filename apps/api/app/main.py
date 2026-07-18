@@ -50,6 +50,7 @@ from app.marketdata import (
     get_market_status as md_market_status,
     get_news as md_get_news,
     get_quote as md_get_quote,
+    is_alphavantage_configured,
     is_fmp_configured,
     is_massive_configured,
     providers_status,
@@ -75,8 +76,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 multi-user paper desk + FMP/Massive market data + admin (PR4)",
-    version="0.6.2",
+    description="L2 multi-user paper desk + FMP/AV/Massive market data + admin",
+    version="0.6.3",
     lifespan=lifespan,
 )
 
@@ -508,9 +509,10 @@ async def health():
         "llm_circuit": breaker["state"],
         "admin_api_configured": bool((settings.admin_api_key or "").strip()),
         "fmp_configured": is_fmp_configured(),
+        "alphavantage_configured": is_alphavantage_configured(),
         "massive_configured": is_massive_configured(),
         "market_data": providers_status(),
-        "version": "0.6.2",
+        "version": "0.6.3",
     }
 
 
@@ -723,6 +725,7 @@ async def broker_status(user: Annotated[CurrentUser, Depends(get_current_user)])
         "paper_only": settings.paper_only,
         "user_id": user.id,
         "fmp_configured": is_fmp_configured(),
+        "alphavantage_configured": is_alphavantage_configured(),
         "massive_configured": is_massive_configured(),
     }
     if hasattr(client, "status_report"):
@@ -1164,7 +1167,7 @@ async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
         "broker_backend": settings.broker_backend,
         "llm_provider": settings.llm_provider,
         "market_data": providers_status(),
-        "version": "0.6.2",
+        "version": "0.6.3",
     }
 
 

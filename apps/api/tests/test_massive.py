@@ -33,9 +33,13 @@ def test_not_configured_by_default():
 def test_configured_when_keys_set(monkeypatch):
     monkeypatch.setenv("MASSIVE_API_KEY", "test-key-123")
     monkeypatch.setenv("FMP_API_KEY", "fmp-key-456")
+    monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "av-key")
     get_settings.cache_clear()
     assert is_massive_configured() is True
     assert is_fmp_configured() is True
+    from app.marketdata import is_alphavantage_configured
+
+    assert is_alphavantage_configured() is True
 
 
 @pytest.mark.asyncio
@@ -119,9 +123,36 @@ async def test_sim_set_mark():
     assert float(t["price"]) == 333.74
 
 
+@pytest.mark.asyncio
+async def test_alphavantage_quote(monkeypatch):
+    monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "av-test")
+    get_settings.cache_clear()
+    from app.marketdata.alphavantage import get_quote as av_quote
+
+    fake = {
+        "Global Quote": {
+            "01. symbol": "AAPL",
+            "02. open": "100",
+            "03. high": "110",
+            "04. low": "99",
+            "05. price": "105.5",
+            "06. volume": "1000",
+            "07. latest trading day": "2026-07-17",
+            "08. previous close": "104",
+            "09. change": "1.5",
+            "10. change percent": "1.44%",
+        }
+    }
+    with patch("app.marketdata.alphavantage._query", new=AsyncMock(return_value=fake)):
+        q = await av_quote("aapl")
+    assert q["source"] == "alphavantage"
+    assert q["close"] == 105.5
+
+
 def test_health_exposes_md_flags(monkeypatch):
     monkeypatch.setenv("FMP_API_KEY", "k")
     monkeypatch.setenv("MASSIVE_API_KEY", "m")
+    monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "av")
     get_settings.cache_clear()
     client = TestClient(app)
     r = client.get("/health")
@@ -129,6 +160,7 @@ def test_health_exposes_md_flags(monkeypatch):
     body = r.json()
     assert body["fmp_configured"] is True
     assert body["massive_configured"] is True
+    assert body["alphavantage_configured"] is True
     assert body["market_data"]["primary"] == "fmp"
 
 
