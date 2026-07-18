@@ -8,7 +8,21 @@ import {
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import ClerkTokenSync from "@/components/ClerkTokenSync";
+import ThemeToggle from "@/components/ThemeToggle";
 import "./globals.css";
+
+/** Prevent theme flash before React hydrates */
+const themeBootScript = `
+(function(){
+  try {
+    var t = localStorage.getItem('indietrades_theme');
+    if (t !== 'light' && t !== 'dark') t = 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,11 +74,12 @@ function AuthChrome() {
           </a>
         </nav>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="hidden items-center gap-1.5 rounded-full border border-good/30 bg-good/5 px-2.5 py-1 font-mono text-[10px] text-good sm:inline-flex">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="hidden items-center gap-1.5 rounded-full border border-good/30 bg-good/5 px-2.5 py-1 font-mono text-xs text-good sm:inline-flex">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
           PAPER ONLY
         </span>
+        <ThemeToggle />
         <Show when="signed-out">
           <SignInButton mode="modal">
             <button
@@ -96,22 +111,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const htmlClass = `${geistSans.variable} ${geistMono.variable} h-full antialiased`;
+
   if (!clerkPk) {
     return (
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      >
-        <body className="flex min-h-full flex-col">{children}</body>
+      <html lang="en" className={htmlClass} data-theme="dark" suppressHydrationWarning>
+        <head>
+          <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        </head>
+        <body className="flex min-h-full flex-col">
+          <header className="relative z-50 flex h-14 items-center justify-end border-b border-line/80 bg-panel/70 px-4 backdrop-blur-xl sm:h-16 sm:px-6">
+            <ThemeToggle />
+          </header>
+          {children}
+        </body>
       </html>
     );
   }
 
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={htmlClass} data-theme="dark" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ClerkProvider
           localization={{

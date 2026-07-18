@@ -2,26 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* ── Dark (default) ───────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
   --font-geist-sans: ui-sans-serif, system-ui, sans-serif;
   --font-geist-mono: ui-monospace, monospace;
+
+  /* rgb channels for Tailwind alpha support */
+  --c-ink: 6 11 20;
+  --c-panel: 12 21 36;
+  --c-line: 26 45 74;
+  --c-accent: 34 211 238;
+  --c-good: 52 211 153;
+  --c-warn: 251 191 36;
+  --c-bad: 248 113 113;
+  --c-mist: 148 163 184;
+  --c-cream: 236 254 255;
+  --c-cognac: 207 250 254;
+
+  --fg: #f1f5f9;
+  --fg-muted: #94a3b8;
+  --bg-grid: rgba(34, 211, 238, 0.03);
+  --bg-glow-a: rgba(34, 211, 238, 0.12);
+  --bg-glow-b: rgba(8, 145, 178, 0.08);
+  --panel-bg: rgba(12, 21, 36, 0.9);
+  --panel-border: #1a2d4a;
+  --panel-glow: rgba(34, 211, 238, 0.12);
+  --stat-bg: rgba(6, 11, 20, 0.72);
+  --chip-bg: rgba(6, 11, 20, 0.55);
+  --chip-border: #2a4568;
+  --title-grad: linear-gradient(90deg, #fff, #cffafe, #22d3ee);
+  --selection-bg: rgba(34, 211, 238, 0.25);
+  --selection-fg: #ecfeff;
+  --scroll-thumb: #1a2d4a;
+  --primary-btn-fg: #060b14;
+}
+
+/* ── Light: cognac / warm off-white ───────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --c-ink: 247 241 232; /* warm cream page */
+  --c-panel: 255 250 244; /* soft ivory panels */
+  --c-line: 217 196 168; /* sand borders */
+  --c-accent: 154 77 28; /* cognac */
+  --c-good: 47 122 86;
+  --c-warn: 180 120 36;
+  --c-bad: 176 58 48;
+  --c-mist: 122 98 78; /* warm gray-brown */
+  --c-cream: 255 252 247;
+  --c-cognac: 154 77 28;
+
+  --fg: #2c1810;
+  --fg-muted: #7a6250;
+  --bg-grid: rgba(154, 77, 28, 0.05);
+  --bg-glow-a: rgba(196, 120, 60, 0.14);
+  --bg-glow-b: rgba(154, 77, 28, 0.08);
+  --panel-bg: rgba(255, 250, 244, 0.94);
+  --panel-border: #d9c4a8;
+  --panel-glow: rgba(154, 77, 28, 0.1);
+  --stat-bg: rgba(255, 255, 255, 0.72);
+  --chip-bg: rgba(255, 252, 247, 0.9);
+  --chip-border: #e0cdb4;
+  --title-grad: linear-gradient(90deg, #2c1810, #6b3a1a, #9a4d1c);
+  --selection-bg: rgba(154, 77, 28, 0.2);
+  --selection-fg: #2c1810;
+  --scroll-thumb: #d0b896;
+  --primary-btn-fg: #fffaf4;
+}
+
+html {
+  font-size: 112.5%; /* 18px base — one step larger than 16px */
 }
 
 body {
-  @apply bg-ink text-slate-100 antialiased font-sans;
+  @apply bg-ink antialiased font-sans;
+  color: var(--fg);
   background-image: radial-gradient(
       ellipse 100% 80% at 50% -30%,
-      rgba(34, 211, 238, 0.12),
+      var(--bg-glow-a),
       transparent 50%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 100%,
-      rgba(8, 145, 178, 0.08),
+      var(--bg-glow-b),
       transparent 45%
     ),
-    linear-gradient(rgba(34, 211, 238, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+    linear-gradient(var(--bg-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
   background-size: auto, auto, 48px 48px, 48px 48px;
   background-attachment: fixed;
   min-height: 100%;
@@ -32,22 +101,59 @@ body {
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.25);
-  color: #ecfeff;
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+/* Remap hard-coded slate/white for light cognac theme */
+[data-theme="light"] .text-white {
+  color: #2c1810 !important;
+}
+[data-theme="light"] .text-slate-50,
+[data-theme="light"] .text-slate-100 {
+  color: #2c1810 !important;
+}
+[data-theme="light"] .text-slate-200 {
+  color: #3d2818 !important;
+}
+[data-theme="light"] .text-slate-300 {
+  color: #4a3224 !important;
+}
+[data-theme="light"] .text-slate-400 {
+  color: #6b5344 !important;
+}
+[data-theme="light"] .text-slate-500 {
+  color: #7a6250 !important;
+}
+[data-theme="light"] .text-slate-600 {
+  color: #8a7260 !important;
+}
+[data-theme="light"] .placeholder\:text-slate-600::placeholder {
+  color: #a8907c !important;
+}
+[data-theme="light"] .hover\:text-white:hover {
+  color: #9a4d1c !important;
+}
+[data-theme="light"] .text-cyan-50 {
+  color: #2c1810 !important;
 }
 
 .hud-panel {
   border-radius: 1rem;
-  border: 1px solid #1a2d4a;
-  background-color: rgba(12, 21, 36, 0.88);
-  padding: 1rem;
+  border: 1px solid var(--panel-border);
+  background-color: var(--panel-bg);
+  padding: 1.125rem;
   backdrop-filter: blur(16px);
-  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.12), 0 8px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 0 0 1px var(--panel-glow), 0 8px 32px rgba(0, 0, 0, 0.12);
   background-image: linear-gradient(
     145deg,
-    rgba(34, 211, 238, 0.04) 0%,
+    color-mix(in srgb, rgb(var(--c-accent)) 6%, transparent) 0%,
     transparent 40%
   );
+}
+
+[data-theme="dark"] .hud-panel {
+  box-shadow: 0 0 0 1px var(--panel-glow), 0 8px 32px rgba(0, 0, 0, 0.45);
 }
 
 .hud-panel-header {
@@ -55,26 +161,26 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(26, 45, 74, 0.8);
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--panel-border) 85%, transparent);
 }
 
 .hud-label {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 10px;
+  font-size: 0.75rem; /* was 10px → ~12px */
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(34, 211, 238, 0.75);
+  color: color-mix(in srgb, rgb(var(--c-accent)) 85%, transparent);
 }
 
 .hud-stat {
   border-radius: 0.75rem;
-  border: 1px solid #1a2d4a;
-  background: rgba(6, 11, 20, 0.7);
-  padding: 0.625rem 0.75rem;
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.1);
+  border: 1px solid var(--panel-border);
+  background: var(--stat-bg);
+  padding: 0.7rem 0.85rem;
+  box-shadow: 0 0 12px var(--panel-glow);
 }
 
 .hud-chip {
@@ -82,44 +188,44 @@ body {
   align-items: center;
   gap: 0.375rem;
   border-radius: 9999px;
-  border: 1px solid #2a4568;
-  background: rgba(6, 11, 20, 0.55);
-  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  padding: 0.3rem 0.7rem;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  color: #cbd5e1;
+  font-size: 0.8125rem; /* was 11px */
+  color: var(--fg-muted);
 }
 
 .hud-btn {
   border-radius: 0.75rem;
-  border: 1px solid rgba(34, 211, 238, 0.35);
-  background: rgba(34, 211, 238, 0.08);
-  padding: 0.375rem 0.75rem;
-  font-size: 12px;
+  border: 1px solid color-mix(in srgb, rgb(var(--c-accent)) 40%, transparent);
+  background: color-mix(in srgb, rgb(var(--c-accent)) 10%, transparent);
+  padding: 0.45rem 0.85rem;
+  font-size: 0.875rem; /* was 12px */
   font-weight: 500;
-  color: #22d3ee;
+  color: rgb(var(--c-accent));
   transition: 0.15s ease;
 }
 
 .hud-btn:hover {
-  border-color: rgba(34, 211, 238, 0.65);
-  background: rgba(34, 211, 238, 0.16);
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.15);
+  border-color: color-mix(in srgb, rgb(var(--c-accent)) 70%, transparent);
+  background: color-mix(in srgb, rgb(var(--c-accent)) 18%, transparent);
+  box-shadow: 0 0 12px var(--panel-glow);
 }
 
 .hud-btn-primary {
   border-radius: 0.75rem;
-  background: #22d3ee;
-  padding: 0.625rem 1rem;
-  font-size: 14px;
+  background: rgb(var(--c-accent));
+  padding: 0.7rem 1.1rem;
+  font-size: 1rem; /* was 14px */
   font-weight: 600;
-  color: #060b14;
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.25);
+  color: var(--primary-btn-fg);
+  box-shadow: 0 0 20px var(--panel-glow);
   transition: 0.15s ease;
 }
 
 .hud-btn-primary:hover {
-  background: #67e8f9;
+  filter: brightness(1.08);
 }
 
 .hud-btn-primary:disabled {
@@ -127,7 +233,7 @@ body {
 }
 
 .bridge-title {
-  background-image: linear-gradient(90deg, #fff, #cffafe, #22d3ee);
+  background-image: var(--title-grad);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -140,7 +246,7 @@ body {
   }
   ::-webkit-scrollbar-thumb {
     border-radius: 9999px;
-    background: #1a2d4a;
+    background: var(--scroll-thumb);
   }
   ::-webkit-scrollbar-track {
     background: transparent;
