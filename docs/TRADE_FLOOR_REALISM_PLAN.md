@@ -2,7 +2,7 @@
 
 **Product:** IndieTrades · https://indietrades.com  
 **Surface:** `/trade` (paper trading floor)  
-**Status:** Planning only — not implementation yet  
+**Status:** Decisions locked (2026-07-18) — build when owner says go  
 **Date:** 2026-07-18  
 
 **Owner intent:** Make `/trade` look and feel like a real stock trading screen, while staying **paper-only**, with **policy + human confirm**, and optional **Grok research** on AI Desk.
@@ -58,15 +58,15 @@ What’s missing for many users is **visual and process realism** — especially
 
 ## 4. Target layout
 
-### Desktop
+### Desktop (locked)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  PAPER ONLY · Net liq · Cash · BP · Day P&L · as-of time    │
 ├──────────────┬────────────────────────────┬─────────────────┤
-│  Watchlist   │  Selected: AAPL  last  %   │  (or full width │
-│  Sym Last %  │  ┌──────────────────────┐  │   chart under   │
-│  ...         │  │  RED / GREEN CHART   │  │   ticket)       │
+│  Watchlist   │  Selected: AAPL  last  %   │                 │
+│  Sym Last %  │  ┌──────────────────────┐  │                 │
+│  ...         │  │  RED / GREEN CHART   │  │                 │
 │              │  └──────────────────────┘  │                 │
 │              │  Order ticket              │                 │
 │              │  [Buy/Sell] qty limit TIF  │                 │
@@ -76,11 +76,13 @@ What’s missing for many users is **visual and process realism** — especially
 └─────────────────────────────────────────────────────────────┘
 ```
 
+Chart sits **above the ticket** in the center column (not full-width under header).
+
 ### Mobile (already partly there)
 
 1. Bottom nav: AI Desk · **Trade** · Plans  
 2. Account chips  
-3. **Selected symbol + chart**  
+3. **Selected symbol + chart** (height capped)  
 4. **Ticket** (primary)  
 5. Compact watchlist (chips or list)  
 6. Positions / fills  
@@ -112,29 +114,29 @@ What’s missing for many users is **visual and process realism** — especially
 
 **Goal:** Tap AAPL → chart paints market path in green/red.
 
-**Preferred v1 options (choose in implementation):**
+**v1 choice (locked):**
 
-| Option | Description | Pros | Cons |
-|--------|-------------|------|------|
-| **A. Line / area** | Close series; stroke green if day up else red | Fast, clean | Less “candles” |
-| **B. Candles** | OHLC green/red bodies | Most “stock market” | Needs solid bars |
-| **C. Embed** | TradingView lightweight widget | Instant pro look | Third-party, less brand control |
-
-**Team leaning:** **B if bar quality is good, else A first** — own the UI, brand colors, PAPER badge stays.
+| Priority | Option | Rule |
+|----------|--------|------|
+| **1st try** | **B. Candles** | Use if daily OHLC from market cascade is solid |
+| **Fallback** | **A. Line / area** | Same layout; green/red stroke by day direction |
+| **Not v1** | **C. Embed** | TradingView only if own chart blocked later |
 
 **Chart scope for v1:**
 
 - [ ] Renders when user selects a symbol from watchlist  
-- [ ] Timeframes: start with **1D** (intraday if data allows) + **5D** or **1M**  
+- [ ] Timeframes: **1D primary + 1M toggle** day one  
 - [ ] Large last price + day change % above chart  
 - [ ] Data from existing market cascade (FMP / etc.; Yahoo unofficial fallback)  
 - [ ] Loading / empty / error states (don’t show a fake chart)  
 - [ ] Source + age badge: e.g. `FMP · 12s ago`  
 - [ ] Mobile: chart height capped; doesn’t push ticket off forever  
+- [ ] Up/down color: **pure green / pure red** for series; brand accent reserved for PAPER badge and chrome  
+- [ ] Always show +/− and % text (not color-only)  
 
 **Out of Phase 2:** drawings, 50 indicators, multi-pane, Level 2, options chain.
 
-### Phase 3 — Order lifecycle (process realism)
+### Phase 3 — Order lifecycle (process realism) — **after feel pass**
 
 Today many paper fills are effectively **instant**. More real:
 
@@ -158,11 +160,11 @@ Today many paper fills are effectively **instant**. More real:
 | Need | Existing / likely | Notes |
 |------|-------------------|--------|
 | Quote last / change % | `/market/quote`, `/market/quotes` | Rate limited per user |
-| OHLC bars | Marketdata cascade + broker `get_bars` | Confirm which TF is reliable in prod |
+| OHLC bars | Marketdata cascade + broker `get_bars` | Prefer reliable **daily** OHLC first; badge source |
 | Portfolio MTM | PaperSim marks + `set_mark` from quotes | Chart + positions should share mark when possible |
 | Session hours | Policy engine RTH logic | Surface as UI clock, don’t reimplement randomly |
 
-**Risk:** Chart looks “dead” if bars fail — always pair chart with refresh + honest empty state.
+**Risk:** Chart looks “dead” if bars fail — always pair chart with refresh + honest empty state. **No fake bars.**
 
 ---
 
@@ -193,26 +195,19 @@ Not:
 
 ---
 
-## 9. Suggested first implementation sprint
+## 9. First implementation sprint (locked scope)
 
-When planning leaves “bounce” mode:
-
-1. **Phase 1 chrome** (blotter tabs, denser watchlist, session/as-of)  
-2. **Phase 2 chart** on symbol select (line or candles)  
+1. **Phase 1 chrome** (blotter tabs, denser watchlist, session/as-of, TIF Day UI)  
+2. **Phase 2 chart** on symbol select (candles if bars OK, else line)  
 3. Keep control plane and mobile ticket priority  
 
-**Do not start Phase 3 until chart + chrome feel right.**
+**Stop and feel.** Do not start Phase 3 until chart + chrome feel right.
 
 ---
 
-## 10. Open questions for the Grok team
+## 10. Open questions — resolved
 
-1. **Chart type for v1:** line (A) vs candles (B) vs temporary embed (C)?  
-2. **Default timeframe:** 1D only first, or 1D + 1M day-one?  
-3. **Desktop layout:** chart above ticket (center column) vs chart full-width under header?  
-4. **Bar source priority** in production (FMP daily vs intraday availability)?  
-5. **Working orders (Phase 3)** same sprint as chart, or strictly after?  
-6. Any brand constraint on pure green/red vs theme accent for up days?  
+See §12 Decision log.
 
 ---
 
@@ -224,12 +219,20 @@ When planning leaves “bounce” mode:
 
 ---
 
-## 12. Decision log (fill after team bounce)
+## 12. Decision log (Grok team bounce 2026-07-18)
 
 | Date | Decision | Notes |
 |------|----------|--------|
-| | | |
+| 2026-07-18 | **Chart v1 = B candles, fallback A line** | Never C embed for v1. Own UI + PAPER badge. Try candles on daily OHLC; if sparse/slow, same-PR line fallback. |
+| 2026-07-18 | **Default TF = 1D primary + 1M toggle day one** | 1D alone is thin for beginners; 1M context is cheap once bars path works. Skip extra TFs. |
+| 2026-07-18 | **Desktop = chart above ticket (center column)** | Full-width under header risks ticket below fold. Matches “see price → act.” |
+| 2026-07-18 | **Phase 3 strictly after feel pass** | Sprint = Phase 1 chrome + Phase 2 chart only. Working orders change mental model; don’t couple to chart risk. |
+| 2026-07-18 | **Up/down = pure green / pure red** | Brand accent for PAPER badge + chrome only. Always pair with +/− and % text (a11y). |
+| 2026-07-18 | **Bar source = existing cascade, badge honestly** | Prefer reliable daily OHLC; no fake volume/bars. Empty/error states required. |
+| 2026-07-18 | **Sprint scope locked** | Phase 1 + Phase 2 → stop and feel → then Phase 3. |
+
+**Voters:** Grok (lead), Harper, Lucas — aligned. Benjamin: no dissent recorded in window.
 
 ---
 
-**End of plan — for review, not a build ticket until approved.**
+**Status:** Decisions locked. **Say the word to build** (Phase 1 chrome + Phase 2 chart).
