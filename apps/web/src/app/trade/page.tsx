@@ -13,6 +13,7 @@ import SymbolChart, { type ChartBar } from "@/components/symbol-chart";
 import {
   cancelOrder,
   createProposal,
+  evaluateOrders,
   listOrders,
   marketBars,
   marketQuotes,
@@ -38,6 +39,13 @@ const BUDGET_MAX = 10_000_000;
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
+
+function formatBudgetShort(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  if (n >= 1000 && n % 1000 === 0) return `$${n / 1000}k`;
+  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
+  return `$${Math.round(n)}`;
+}
 
 /** US-style equity ticker: AAPL, BRK.B, etc. */
 function normalizeTicker(raw: string): string | null {
@@ -512,6 +520,29 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     return budgetPick;
   }
 
+  const budgetChip = useMemo(() => {
+    const fromAccount = account?.starting_cash
+      ? Number(account.starting_cash)
+      : NaN;
+    if (Number.isFinite(fromAccount) && fromAccount > 0) {
+      return formatBudgetShort(fromAccount);
+    }
+    const pick = resolveBudgetAmount();
+    return pick != null ? formatBudgetShort(pick) : "$100k";
+    // resolveBudgetAmount is sync pure from state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.starting_cash, budgetPick, budgetCustom]);
+
+  // Escape closes paper budget modal
+  useEffect(() => {
+    if (!showBudget) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !resetBusy) setShowBudget(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showBudget, resetBusy]);
+
   async function onConfirmBudget() {
     const cash = resolveBudgetAmount();
     if (cash == null || cash < BUDGET_MIN || cash > BUDGET_MAX) {
@@ -587,7 +618,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 {session.label}
               </span>
             )}
-            <span className="hidden font-mono text-[10px] text-mist sm:inline">
+            <span className="font-mono text-[10px] text-mist">
               Quotes as of {asOf}
             </span>
           </div>
@@ -598,6 +629,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 void refresh();
                 void refreshQuotes();
                 void refreshBars();
+                void evaluateOrders().catch(() => null);
               }}
               className="min-h-9 rounded-full border border-line px-3 py-1.5 text-xs text-mist hover:text-white"
             >
@@ -629,9 +661,9 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             type="button"
             disabled={resetBusy}
             onClick={() => setShowBudget(true)}
-            className="min-h-10 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn disabled:opacity-50"
+            className="min-h-11 shrink-0 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn disabled:opacity-50"
           >
-            Paper budget
+            Paper budget · {budgetChip}
           </button>
         </div>
 
@@ -713,8 +745,9 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             className="col-span-2 sm:col-span-1"
           />
         </div>
-        <p className="mb-4 font-mono text-[10px] text-mist">
-          Simulated paper account — not a broker · quotes may be delayed
+        <p className="mb-4 font-mono text-[10px] leading-relaxed text-mist">
+          Simulated paper account — not a broker · market data may be delayed ·
+          starting budget {budgetChip} (reset anytime)
         </p>
 
         {/*
@@ -987,22 +1020,27 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               <div className="mb-3 flex gap-1 rounded-full border border-line p-0.5">
                 {(
                   [
-                    ["positions", "Positions"],
-                    ["orders", "Orders"],
-                    ["fills", "Fills"],
+                    ["positions", "Positions", positions.length],
+                    ["orders", "Orders", workingOrders.length],
+                    ["fills", "Fills", fillOrders.length],
                   ] as const
-                ).map(([id, label]) => (
+                ).map(([id, label, count]) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => setBlotter(id)}
-                    className={`min-h-9 flex-1 rounded-full px-2 py-1 text-xs font-semibold ${
+                    className={`min-h-10 flex-1 rounded-full px-2 py-1 text-xs font-semibold ${
                       blotter === id
                         ? "bg-ink text-white"
                         : "text-mist hover:text-white"
                     }`}
                   >
                     {label}
+                    {count > 0 ? (
+                      <span className="ml-1 font-mono text-[10px] opacity-70">
+                        {count}
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -1178,6 +1216,9 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="budget-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !resetBusy) setShowBudget(false);
+          }}
         >
           <div
             className="w-full max-w-md overflow-hidden rounded-t-2xl border border-line bg-panel shadow-2xl sm:rounded-2xl"

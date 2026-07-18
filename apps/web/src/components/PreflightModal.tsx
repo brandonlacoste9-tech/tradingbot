@@ -86,8 +86,11 @@ export default function PreflightModal({ proposal, onClose }: Props) {
       >
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="flex flex-wrap items-center gap-2 text-xs font-medium uppercase tracking-wide text-slate-500">
               Paper preflight
+              <span className="rounded-full border border-good/40 bg-good/10 px-2 py-0.5 font-mono text-[10px] font-bold text-good">
+                PAPER
+              </span>
             </p>
             <h2
               id="preflight-title"
