@@ -31,8 +31,8 @@ export default function DisclaimerBanner() {
         <strong className="font-semibold">PAPER / EDUCATIONAL</strong>
         <span className="text-warn/70">
           {" "}
-          · Not advice · Not a broker · Propose → policy → confirm · paper fills
-          only
+          · Grok&apos;s takes are opinions · You decide · Not advice · Not a
+          broker · Confirm → paper only
         </span>
       </div>
     );
@@ -45,9 +45,10 @@ export default function DisclaimerBanner() {
           <p className="hud-label !text-warn">Before you board</p>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
             <strong>IndieTrades</strong> is a{" "}
-            <strong>paper-trading research desk</strong>. Grok researches and
-            proposes; a rules engine and your confirm gate must pass before
-            anything hits the paper book. No real money. Not investment advice.
+            <strong>paper-trading research desk</strong>. Grok can look at the
+            market and say what looks good or weak for practice — that&apos;s an
+            opinion, not a guarantee. You confirm every paper trade. No real
+            money. You own your decisions. Not investment advice.
           </p>
         </div>
         <button

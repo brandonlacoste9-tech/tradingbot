@@ -20,8 +20,8 @@ const REASONS = [
   },
   {
     icon: "🛡️",
-    title: "Bro, not autopilot",
-    body: "Grok digs and proposes. Code enforces risk. You confirm. Paper fills. No “bot spent your money.”",
+    title: "Opinion, not orders",
+    body: "Grok can flag what looks good in the market. Policy + you confirm. Paper only — outcomes are on you, not us.",
   },
 ];
 

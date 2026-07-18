@@ -17,11 +17,11 @@ type Msg = {
 };
 
 const QUICK = [
-  "Quote AAPL",
-  "Research NVDA",
-  "What is my buying power?",
-  "Propose a limit buy of 1 share of SPY with a short thesis",
-  "Hold — no edge today",
+  "What looks good in the market for paper practice today?",
+  "Quote AAPL — good setup or skip?",
+  "Research NVDA and tell me if it's interesting",
+  "Propose a limit buy of 1 share of SPY with your thesis",
+  "Hold — nothing looks good right now",
 ];
 
 const LOADING_STEPS = [
@@ -216,10 +216,11 @@ function ChatBody({
           <div>
             <div className="hud-label">Chat · Grok</div>
             <h2 className="text-base font-semibold text-white">
-              Your market research bro
+              What looks good right now?
             </h2>
             <p className="text-xs text-mist">
-              Quotes, newsy digs, paper proposals — he talks, you approve
+              Market takes + paper proposals — his opinion, your call, virtual
+              fills
             </p>
           </div>
           {busy && (

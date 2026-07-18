@@ -13,11 +13,11 @@ export function getSiteUrl(): string {
 export const SITE_NAME = "IndieTrades";
 
 export const DEFAULT_DESCRIPTION =
-  "IndieTrades: Grok as your stock market research bro — digs on ideas, policy checks risk, you confirm, paper fills. Real tickers, virtual cash. Not investment advice.";
+  "IndieTrades: Grok looks at the market and tells you what looks good or skippable for paper practice — policy checks risk, you confirm, virtual fills. Not investment advice. You're responsible for your decisions.";
 
 /** Short brand line for hero / social */
 export const BRAND_TAGLINE =
-  "Grok is your market research bro. You still make the call.";
+  "Grok calls the setup. You confirm. Paper only — not advice, not our money.";
 
 export const SEO_KEYWORDS = [
   "paper trading",
