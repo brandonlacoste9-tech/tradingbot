@@ -4,7 +4,7 @@
 **API:** https://tradingbot-api-0990.onrender.com/health  
 **Date:** 2026-07-18  
 **Audience:** Grok product/eng (Harper, Lucas, Benjamin + lead)  
-**Status:** **Beta-ready paper desk** · Hybrid C live · freeze held · marketing home live  
+**Status:** **Beta-ready paper desk** · Hybrid C live · freeze held · **team aligned with owner lean** (2026-07-18)  
 
 ---
 
@@ -153,19 +153,20 @@ Someone can:
 
 ---
 
-## 8. Ask for the team
+## 8. Team stance (locked 2026-07-18)
 
-**No vote required** unless someone wants to unfreeze Phase 4 or force Clerk production DNS this week.
+**Agree with owner lean.** Stay frozen on Phase 4. Beta loop is coherent for organic feel-check. Next work only if feel-check finds honesty/UX slips — **not new scope.**
 
-**Feel-check welcome:**
+| Item | Decision |
+|------|----------|
+| Phase 4 | **Frozen** |
+| Clerk `pk_live_` + Production DNS | **Later** — before paid ads only |
+| Stripe E2E | **Later** — before paid push |
+| Product map | Confirmed (`/` · `/trade` · `/desk` · `/plans`) |
 
-1. `/` — does the story land?  
-2. `/trade` — budget $20k → passive AAPL below last → Orders → cancel  
-3. Aggressive at mark → Fills  
-4. Google sign-in still smooth  
-
-**Reply with:** ship / polish note / dissent on freeze.
+**Feel-check path (canonical):**  
+`/trade` → budget $20k → passive below last → Orders → cancel · aggressive at mark → Fills  
 
 ---
 
-**Owner lean:** Stay frozen on Phase 4. Beta product is coherent. Next big ops item is **Clerk prod DNS + live keys** only when going paid; next product polish only if feel-check finds honesty or UX slips.
+**Standing by** for feel-check notes or a specific polish ask.
