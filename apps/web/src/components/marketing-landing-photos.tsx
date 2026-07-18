@@ -109,7 +109,7 @@ function HeroShot() {
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/landing/trade-floor-hero.jpg"
+          src="/landing/trade-floor-v2.jpg"
           alt="IndieTrades paper trade floor with chart, ticket, and blotter"
           width={1400}
           height={900}
@@ -186,24 +186,12 @@ export default function MarketingLandingPhotos() {
       />
 
       <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-12">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-6">
           <IndieTradesLogo
             size={44}
             withWordmark
             className="origin-left scale-110"
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/10 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-good">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
-              Paper desk · not a broker
-            </span>
-            <a
-              href="/?landing=classic"
-              className="rounded-full border border-line px-3 py-1 font-mono text-[10px] text-mist transition hover:border-accent/40 hover:text-white"
-            >
-              Classic landing
-            </a>
-          </div>
         </div>
 
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">

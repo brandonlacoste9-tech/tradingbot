@@ -3,8 +3,8 @@
 import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 import { IndieTradesLogo, IndieTradesMark } from "@/components/indie-trades-logo";
 
-/** Sole hero image — pixel trade floor (Paper only · chart · ticket · blotter) */
-const TRADE_FLOOR_HERO = "/landing/trade-floor-hero.jpg";
+/** Sole hero — second floor shot (full pixel UI: Paper only · Trade floor) */
+const TRADE_FLOOR_HERO = "/landing/trade-floor-v2.jpg";
 
 const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -155,24 +155,12 @@ export default function MarketingLandingClassic() {
       />
 
       <section className="relative mx-auto max-w-7xl px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-12">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-6">
           <IndieTradesLogo
             size={44}
             withWordmark
             className="origin-left scale-110"
           />
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/10 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-good">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
-              Paper desk · not a broker
-            </span>
-            <a
-              href="/?landing=photos"
-              className="rounded-full border border-line px-3 py-1 font-mono text-[10px] text-mist transition hover:border-accent/40 hover:text-white"
-            >
-              Photo landing
-            </a>
-          </div>
         </div>
 
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">

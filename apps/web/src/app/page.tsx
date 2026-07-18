@@ -28,9 +28,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Public marketing home.
- * Variants: photos (default) | classic — see marketing-landing.tsx
- * Revert anytime: /?landing=classic  or  NEXT_PUBLIC_LANDING_VARIANT=classic
+ * Public marketing home — classic + pixel trade floor hero.
  * Product: /trade · /desk · /plans
  */
 export default function HomePage() {
