@@ -154,7 +154,13 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const [proposal, setProposal] = useState<TradeProposal | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [showFaq, setShowFaq] = useState(false);
-  const [confetti, setConfetti] = useState(false);
+  /** Celebration overlay text — only set for intentional moments (fill vs reset). */
+  const [celebrate, setCelebrate] = useState<string | null>(null);
+
+  const flashCelebrate = useCallback((msg: string, ms = 1600) => {
+    setCelebrate(msg);
+    window.setTimeout(() => setCelebrate(null), ms);
+  }, []);
 
   const [symbol, setSymbol] = useState("AAPL");
   const [side, setSide] = useState<"buy" | "sell">("buy");
@@ -290,8 +296,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     try {
       const res = await paperReset(100_000);
       setFlash(res.message || "Paper book reset. Fresh $100k.");
-      setConfetti(true);
-      setTimeout(() => setConfetti(false), 1800);
+      flashCelebrate("🎉 Fresh paper book");
       await refresh();
       await refreshQuotes();
     } catch (e) {
@@ -303,9 +308,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
 
   return (
     <main className="relative min-h-screen pb-12">
-      {confetti && (
-        <div className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center pt-24 text-4xl animate-pulse">
-          🎉 Fresh paper book
+      {celebrate && (
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center pt-24 animate-pulse">
+          <span className="rounded-2xl border border-good/40 bg-ink/90 px-5 py-3 text-center text-lg font-semibold text-good shadow-xl backdrop-blur-md sm:text-2xl">
+            {celebrate}
+          </span>
         </div>
       )}
 
@@ -749,11 +756,9 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               updated?.policy_status === "submitted" ||
               updated?.policy_status === "filled"
             ) {
-              setFlash(
-                `Paper fill: ${updated.side} ${updated.qty} ${updated.symbol}. Check positions 🎯`
-              );
-              setConfetti(true);
-              setTimeout(() => setConfetti(false), 1600);
+              const msg = `Paper fill: ${updated.side} ${updated.qty} ${updated.symbol} 🎯`;
+              setFlash(`${msg} — check positions below.`);
+              flashCelebrate(msg);
             }
             void refresh();
             void refreshQuotes();

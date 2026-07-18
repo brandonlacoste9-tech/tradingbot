@@ -1,7 +1,7 @@
 "use client";
 
 import { SignInButton, useAuth } from "@clerk/nextjs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Chat from "@/components/Chat";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
 import HowItWorks from "@/components/HowItWorks";
@@ -152,18 +152,26 @@ function HomePageBody({
         <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="hud-label mb-1">Paper desk</p>
+              <p className="hud-label mb-1">AI Desk</p>
               <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
-                IndieTrades
+                AI Desk
               </h1>
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-mist">
-                Chat with Grok → it may propose a trade →{" "}
-                <strong className="font-medium text-slate-300">you confirm</strong>{" "}
-                → paper fill only. No live brokerage.{" "}
-                <a href="/trade" className="font-medium text-good underline-offset-2 hover:underline">
-                  Open paper trading floor →
-                </a>
+                Chat with Grok → it may propose a paper trade →{" "}
+                <strong className="font-medium text-slate-300">you confirm</strong>.
+                Or skip the chat and practice on the floor.
               </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <a
+                  href="/trade"
+                  className="inline-flex items-center rounded-full bg-good px-4 py-2 text-sm font-semibold text-ink shadow-lg shadow-good/20 hover:brightness-110"
+                >
+                  Open Trade floor →
+                </a>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                  paper only
+                </span>
+              </div>
               <div className="mt-3">
                 <UserBar />
               </div>
@@ -202,7 +210,7 @@ function HomePageBody({
             <Panel
               title="Paper book"
               label="portfolio"
-              badge={loading ? "…" : signedIn ? "SIM" : "—"}
+              badge={loading ? "…" : signedIn ? "PAPER" : "—"}
             >
               {connError && (
                 <p className="mb-2 text-sm text-bad">{connError}</p>
@@ -223,9 +231,23 @@ function HomePageBody({
               )}
               {signedIn && (
                 <dl className="mt-3 space-y-1.5 border-t border-line/70 pt-3 font-mono text-xs">
-                  <KV k="Account" v={conn?.account_id || account?.id || "—"} />
-                  <KV k="Backend" v={conn?.backend || portfolioSource} />
-                  <KV k="Paper" v={conn?.is_paper === false ? "no" : "yes"} />
+                  <KV k="Account" v="Paper account" />
+                  <KV
+                    k="Mode"
+                    v={
+                      conn?.is_paper === false
+                        ? "Live (unexpected)"
+                        : "Simulated · not real money"
+                    }
+                  />
+                  <KV
+                    k="Trade"
+                    v={
+                      <a href="/trade" className="text-good hover:underline">
+                        Open floor →
+                      </a>
+                    }
+                  />
                 </dl>
               )}
               {authLoaded && !signedIn && clerkEnabled && (
@@ -417,11 +439,11 @@ function Panel({
   );
 }
 
-function KV({ k, v }: { k: string; v: string }) {
+function KV({ k, v }: { k: string; v: ReactNode }) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-mist">{k}</dt>
-      <dd className="max-w-[60%] truncate text-slate-200">{v}</dd>
+      <dd className="max-w-[60%] truncate text-right text-slate-200">{v}</dd>
     </div>
   );
 }
