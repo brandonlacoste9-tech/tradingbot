@@ -142,6 +142,16 @@ Without this, the UI loads but shows **API down** (it expects `http://localhost:
 
 Deploying from the **repo root** publishes nothing useful (no `index.html`). The app must build from `apps/web` with publish dir `out` (static export).
 
+### IBKR paper (Canada — local)
+
+Production Netlify/Render stays on **PaperSim**. For real IBKR paper fills on your PC:
+
+1. Read **[docs/IBKR_SETUP.md](./docs/IBKR_SETUP.md)**  
+2. IB Gateway → **Paper** → API port **4002**  
+3. `.\scripts\run-api-ibkr.ps1`  
+4. `.\scripts\check-ibkr.ps1`  
+5. Web UI with `NEXT_PUBLIC_API_URL=http://localhost:8000`
+
 ### Backend (Render)
 
 This repo includes a **Render Blueprint** at `render.yaml` for the FastAPI API.

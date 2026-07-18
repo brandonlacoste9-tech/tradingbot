@@ -340,6 +340,28 @@ async def health():
     }
 
 
+@app.get("/broker/status")
+async def broker_status():
+    """Diagnostics for sim/ibkr/alpaca — no orders placed."""
+    client = _client()
+    base = {
+        "broker_backend": getattr(client, "backend_name", settings.broker_backend),
+        "paper_only": settings.paper_only,
+    }
+    if hasattr(client, "status_report"):
+        try:
+            detail = await client.status_report()  # type: ignore[misc]
+            return {**base, **detail}
+        except Exception as e:  # noqa: BLE001
+            return {**base, "error": str(e)}
+    # sim / alpaca fallback
+    try:
+        v = await client.validate_connection()
+        return {**base, "connected": True, **v}
+    except BrokerError as e:
+        return {**base, "connected": False, "error": str(e)}
+
+
 @app.post("/connection/validate")
 async def validate_connection():
     """Validate broker connection; record last_validated + is_paper."""

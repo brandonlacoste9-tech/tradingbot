@@ -172,8 +172,9 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 2. [x] **Web research tools** — `web_search` tool + demo keywords  
 3. [x] Grok/xAI LLM live on Render (`LLM_PROVIDER=xai`)  
 4. [x] Desk UI: health chips, portfolio stats, positions, auto-validate  
-5. [ ] **Owner IBKR Gateway** — local paper on 4002 when ready for real paper fills  
-6. [ ] Optional later: TradingView webhook → same policy gate  
+5. [x] **IBKR paper path** — hardened client, `/broker/status`, `docs/IBKR_SETUP.md`, scripts  
+6. [ ] Owner: open IBKR paper + Gateway, run `scripts/run-api-ibkr.ps1` locally  
+7. [ ] Optional later: TradingView webhook → same policy gate  
 
 ---
 
