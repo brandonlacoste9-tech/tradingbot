@@ -342,14 +342,8 @@ export default function MarketingLandingClassic() {
               className="pointer-events-none absolute -inset-4 rounded-3xl bg-accent/10 blur-2xl"
               aria-hidden
             />
-            <div className="relative overflow-hidden rounded-2xl border border-line/80 bg-panel/80 shadow-2xl shadow-accent/15 ring-1 ring-accent/20">
-              <div className="flex items-center justify-between border-b border-line/70 px-3 py-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-good">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
-                  Paper only
-                </span>
-                <span className="font-mono text-[10px] text-accent">Trade floor</span>
-              </div>
+            {/* Single top shot only — pixel trade floor (Paper only · chart · ticket · blotter) */}
+            <div className="relative overflow-hidden rounded-2xl border border-line/80 shadow-2xl shadow-accent/15 ring-1 ring-accent/20">
               <Image
                 src="/landing/trade-floor-pixel-card.jpg"
                 alt="IndieTrades paper trade floor with chart, ticket, and blotter"
@@ -361,8 +355,7 @@ export default function MarketingLandingClassic() {
               />
             </div>
             <p className="mt-3 text-center font-mono text-[10px] text-mist">
-              Pixel-perfect product chrome — live floor uses honest quotes +
-              PaperSim
+              Paper only · Trade floor — live desk uses honest quotes + PaperSim
             </p>
           </div>
         </div>

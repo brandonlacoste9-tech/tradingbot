@@ -8,11 +8,11 @@ import MarketingLandingPhotos from "@/components/marketing-landing-photos";
 /**
  * Landing switcher — easy revert between variants.
  *
- * Default: classic (layout you liked + pixel trade floor hero)
+ * Default: classic (copy + single pixel trade floor shot at top only)
  * Classic: /?landing=classic
- * Photos gallery: /?landing=photos
+ * Photos: /?landing=photos (same hero shot, alternate chrome)
  *
- * Env override (Netlify): NEXT_PUBLIC_LANDING_VARIANT=classic|photos
+ * Env: NEXT_PUBLIC_LANDING_VARIANT=classic|photos
  */
 function LandingInner() {
   const sp = useSearchParams();

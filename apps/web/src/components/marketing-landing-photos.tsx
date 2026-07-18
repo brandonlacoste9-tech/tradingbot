@@ -145,78 +145,6 @@ function HeroShot() {
   );
 }
 
-function ProductGallery() {
-  return (
-    <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="hud-label mb-1">See the desk</p>
-          <h2 className="bridge-title text-2xl font-bold sm:text-3xl">
-            Real product surfaces — not a stock photo.
-          </h2>
-          <p className="mt-2 max-w-xl text-sm text-mist">
-            Trade floor, AI Desk, and mobile ticket. Paper only. You confirm.
-          </p>
-        </div>
-      </div>
-      <div className="grid gap-4 lg:grid-cols-12">
-        <figure className="lg:col-span-8">
-          <div className="overflow-hidden rounded-2xl border border-line/80 bg-ink/40 ring-1 ring-accent/15">
-            <Image
-              src="/landing/trade-floor-pixel-card.jpg"
-              alt={SHOTS[0].alt}
-              width={1400}
-              height={900}
-              className="h-auto w-full object-cover object-top"
-              sizes="(max-width: 1024px) 100vw, 66vw"
-            />
-          </div>
-          <figcaption className="mt-2 flex items-center justify-between font-mono text-[11px] text-mist">
-            <span className="font-semibold text-slate-300">{SHOTS[0].label}</span>
-            <span>{SHOTS[0].caption}</span>
-          </figcaption>
-        </figure>
-        <div className="flex flex-col gap-4 lg:col-span-4">
-          <figure>
-            <div className="overflow-hidden rounded-2xl border border-line/80 bg-ink/40">
-              <Image
-                src="/landing/ai-desk.jpg"
-                alt={SHOTS[1].alt}
-                width={800}
-                height={450}
-                className="h-auto w-full object-cover"
-                sizes="(max-width: 1024px) 100vw, 33vw"
-              />
-            </div>
-            <figcaption className="mt-2 font-mono text-[11px] text-mist">
-              <span className="font-semibold text-slate-300">{SHOTS[1].label}</span>
-              {" · "}
-              {SHOTS[1].caption}
-            </figcaption>
-          </figure>
-          <figure className="mx-auto w-full max-w-[220px] lg:max-w-none">
-            <div className="overflow-hidden rounded-2xl border border-line/80 bg-ink/40">
-              <Image
-                src="/landing/mobile-ticket.jpg"
-                alt={SHOTS[2].alt}
-                width={480}
-                height={850}
-                className="h-auto w-full object-cover object-top"
-                sizes="220px"
-              />
-            </div>
-            <figcaption className="mt-2 text-center font-mono text-[11px] text-mist">
-              <span className="font-semibold text-slate-300">{SHOTS[2].label}</span>
-              {" · "}
-              {SHOTS[2].caption}
-            </figcaption>
-          </figure>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function HeroCtas({
   isLoaded,
   isSignedIn,
@@ -342,8 +270,6 @@ export default function MarketingLandingPhotos() {
       </section>
 
       <MarketRibbon />
-
-      <ProductGallery />
 
       <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
