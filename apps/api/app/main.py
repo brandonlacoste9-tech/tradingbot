@@ -13,8 +13,9 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from app.agent.loop import run_agent_turn_demo, run_agent_turn_llm
@@ -33,6 +34,15 @@ from app.policy.engine import (
     is_proposal_expired,
 )
 from app.store import MemoryStore, TradeProposal, new_id
+from app.billing.plans import PLAN_LIMITS, normalize_plan
+from app.billing.stripe_svc import (
+    create_checkout_session,
+    create_portal_session,
+    plan_from_status,
+    stripe_configured,
+    user_id_from_subscription_obj,
+)
+from app.billing.usage import record_chat_and_check
 from app.tenancy import get_tenant_store
 from app.tools.web_search import web_search
 
@@ -45,8 +55,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 multi-user paper desk (policy + confirm + tenancy + Postgres PR2)",
-    version="0.4.0",
+    description="L2 multi-user paper desk + Stripe billing (PR3)",
+    version="0.5.0",
     lifespan=lifespan,
 )
 
@@ -74,6 +84,19 @@ class ConfirmRequest(BaseModel):
 class RejectRequest(BaseModel):
     proposal_id: str
     reason: str | None = None
+
+
+class CheckoutRequest(BaseModel):
+    success_url: str | None = None
+    cancel_url: str | None = None
+
+
+class PortalRequest(BaseModel):
+    return_url: str | None = None
+
+
+class DevSetPlanRequest(BaseModel):
+    plan: str = Field(description="free | pro | pro_plus")
 
 
 # ---------- helpers ----------
@@ -392,20 +415,182 @@ async def health():
         "tenancy": get_tenant_store().stats(),
         "sim_tenants": sim_tenant_count(),
         "postgres": is_db_available(),
+        "stripe_configured": stripe_configured(),
     }
 
 
 @app.get("/me")
 async def me(user: Annotated[CurrentUser, Depends(get_current_user)]):
     profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
+    plan = normalize_plan(profile.get("plan"))
     return {
         "user_id": user.id,
         "clerk_id": user.clerk_id,
         "email": user.email or profile.get("email"),
         "auth_mode": user.auth_mode,
-        "plan": profile.get("plan", "free"),
+        "plan": plan,
         "postgres": is_db_available(),
+        "stripe_configured": stripe_configured(),
+        "limits": PLAN_LIMITS.get(plan, PLAN_LIMITS["free"]),
+        "subscription_status": profile.get("subscription_status"),
     }
+
+
+@app.get("/billing/status")
+async def billing_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
+    plan = normalize_plan(profile.get("plan"))
+    return {
+        "user_id": user.id,
+        "plan": plan,
+        "limits": PLAN_LIMITS.get(plan, PLAN_LIMITS["free"]),
+        "stripe_configured": stripe_configured(),
+        "stripe_customer_id": profile.get("stripe_customer_id"),
+        "subscription_status": profile.get("subscription_status"),
+        "plans": PLAN_LIMITS,
+    }
+
+
+@app.post("/billing/checkout")
+async def billing_checkout(
+    body: CheckoutRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
+    if not stripe_configured():
+        raise HTTPException(
+            503,
+            "Stripe not configured. Set STRIPE_SECRET_KEY and STRIPE_PRICE_ID_PRO.",
+        )
+    try:
+        session = await create_checkout_session(
+            user_id=user.id,
+            email=user.email or profile.get("email"),
+            success_url=body.success_url or settings.stripe_success_url,
+            cancel_url=body.cancel_url or settings.stripe_cancel_url,
+            customer_id=profile.get("stripe_customer_id"),
+        )
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, str(e)) from e
+    return session
+
+
+@app.post("/billing/portal")
+async def billing_portal(
+    body: PortalRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
+    cid = profile.get("stripe_customer_id")
+    if not cid:
+        raise HTTPException(400, "No Stripe customer on file — complete checkout first")
+    try:
+        session = await create_portal_session(
+            customer_id=cid,
+            return_url=body.return_url or settings.stripe_success_url,
+        )
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, str(e)) from e
+    return session
+
+
+@app.post("/billing/dev-set-plan")
+async def billing_dev_set_plan(
+    body: DevSetPlanRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """Local/demo only: set plan without Stripe when STRIPE_DEV_MODE=true."""
+    if not get_settings().stripe_dev_mode:
+        raise HTTPException(403, "STRIPE_DEV_MODE is not enabled")
+    plan = normalize_plan(body.plan)
+    store = get_tenant_store()
+    profile = await store.ensure_user_async(user.id, email=user.email)
+    profile["plan"] = plan
+    store.for_user(user.id).profile = profile
+    try:
+        from app.db.repo import set_user_plan
+
+        await set_user_plan(user.id, plan, email=user.email)
+    except Exception:  # noqa: BLE001
+        pass
+    return {"user_id": user.id, "plan": plan}
+
+
+@app.post("/billing/webhook")
+async def billing_webhook(request: Request):
+    """Stripe webhook — no user auth; verified via signature."""
+    if not settings.stripe_webhook_secret and not settings.stripe_dev_mode:
+        raise HTTPException(503, "Webhook not configured")
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+    try:
+        from app.billing.stripe_svc import construct_webhook_event
+
+        event = construct_webhook_event(payload, sig)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"Webhook error: {e}") from e
+
+    etype = event["type"]
+    data = event["data"]["object"]
+    user_id = None
+    plan = "free"
+    customer_id = data.get("customer")
+    sub_id = None
+    status = None
+
+    if etype == "checkout.session.completed":
+        user_id = data.get("client_reference_id") or (data.get("metadata") or {}).get(
+            "user_id"
+        )
+        customer_id = data.get("customer")
+        sub_id = data.get("subscription")
+        status = "active"
+        plan = "pro"
+    elif etype in (
+        "customer.subscription.updated",
+        "customer.subscription.created",
+        "customer.subscription.deleted",
+    ):
+        status = data.get("status")
+        plan = plan_from_status(status)
+        sub_id = data.get("id")
+        user_id = user_id_from_subscription_obj(type("O", (), {"metadata": data.get("metadata") or {}})())
+        if not user_id and customer_id:
+            try:
+                from app.db.repo import find_user_id_by_customer
+
+                user_id = await find_user_id_by_customer(str(customer_id))
+            except Exception:  # noqa: BLE001
+                pass
+        if etype == "customer.subscription.deleted":
+            plan = "free"
+            status = "canceled"
+
+    if user_id:
+        store = get_tenant_store()
+        profile = await store.ensure_user_async(str(user_id))
+        profile["plan"] = plan
+        if customer_id:
+            profile["stripe_customer_id"] = str(customer_id)
+        if sub_id:
+            profile["stripe_subscription_id"] = str(sub_id)
+        if status:
+            profile["subscription_status"] = status
+        store.for_user(str(user_id)).profile = profile
+        try:
+            from app.db.repo import set_user_plan
+
+            await set_user_plan(
+                str(user_id),
+                plan,
+                stripe_customer_id=str(customer_id) if customer_id else None,
+                stripe_subscription_id=str(sub_id) if sub_id else None,
+                subscription_status=status,
+            )
+        except Exception:  # noqa: BLE001
+            pass
+
+    return JSONResponse({"received": True, "type": etype, "user_id": user_id, "plan": plan})
 
 
 @app.get("/broker/status")
@@ -467,6 +652,15 @@ async def agent_chat(
     Scoped to authenticated user. Never submits orders here.
     """
     mem = await _mem(user)
+    profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
+    usage = await record_chat_and_check(user.id, profile.get("plan"))
+    if not usage["allowed"]:
+        raise HTTPException(
+            429,
+            f"Daily chat limit reached for plan={usage['plan']} "
+            f"({usage['used']}/{usage['limit']}). Upgrade to Pro.",
+        )
+
     mem.audit_event(
         "user",
         "chat_message",
@@ -548,6 +742,8 @@ async def agent_chat(
         "provider": plan.get("provider"),
         "llm_enabled": llm_on,
         "user_id": user.id,
+        "plan": usage["plan"],
+        "usage": {"used": usage["used"], "limit": usage["limit"]},
     }
 
 

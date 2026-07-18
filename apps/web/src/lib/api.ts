@@ -124,3 +124,39 @@ export function portfolio() {
     user_id?: string;
   }>("/portfolio");
 }
+
+export function billingStatus() {
+  return req<{
+    user_id: string;
+    plan: string;
+    limits: { label?: string; chat_per_day?: number; price_cad?: number };
+    stripe_configured: boolean;
+    stripe_customer_id?: string | null;
+    subscription_status?: string | null;
+    plans?: Record<
+      string,
+      { label: string; chat_per_day: number; price_cad: number }
+    >;
+  }>("/billing/status");
+}
+
+export function billingCheckout(success_url?: string, cancel_url?: string) {
+  return req<{ id: string; url: string }>("/billing/checkout", {
+    method: "POST",
+    body: JSON.stringify({ success_url, cancel_url }),
+  });
+}
+
+export function billingPortal(return_url?: string) {
+  return req<{ url: string }>("/billing/portal", {
+    method: "POST",
+    body: JSON.stringify({ return_url }),
+  });
+}
+
+export function billingDevSetPlan(plan: string) {
+  return req<{ user_id: string; plan: string }>("/billing/dev-set-plan", {
+    method: "POST",
+    body: JSON.stringify({ plan }),
+  });
+}

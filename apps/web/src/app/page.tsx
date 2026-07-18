@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import BillingPanel from "@/components/BillingPanel";
 import Chat from "@/components/Chat";
 import UserBar from "@/components/UserBar";
 import {
@@ -215,6 +216,8 @@ export default function HomePage() {
             </div>
           </Panel>
 
+          <BillingPanel />
+
           <Panel title="Safety">
             <ul className="list-disc space-y-1 pl-4 text-xs text-slate-400">
               <li>Paper-only by construction (sim / IBKR paper)</li>
@@ -222,6 +225,7 @@ export default function HomePage() {
               <li>Confirm TTL 180s before any order</li>
               <li>client_order_id on every submit</li>
               <li>decide_hold journals quiet days</li>
+              <li>Free plan daily chat cap; Pro via Stripe</li>
             </ul>
           </Panel>
         </aside>

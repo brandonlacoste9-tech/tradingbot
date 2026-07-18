@@ -15,23 +15,39 @@ def _json(obj: Any) -> str:
     return json.dumps(obj, default=str)
 
 
-async def upsert_user(user_id: str, email: str | None = None, plan: str = "free") -> None:
+async def upsert_user(
+    user_id: str, email: str | None = None, plan: str | None = None
+) -> None:
     if not is_db_available():
         return
     pool = get_pool()
     async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO app_users (id, email, plan)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (id) DO UPDATE SET
-              email = COALESCE(EXCLUDED.email, app_users.email),
-              updated_at = now()
-            """,
-            user_id,
-            email,
-            plan,
-        )
+        if plan is not None:
+            await conn.execute(
+                """
+                INSERT INTO app_users (id, email, plan)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (id) DO UPDATE SET
+                  email = COALESCE(EXCLUDED.email, app_users.email),
+                  plan = EXCLUDED.plan,
+                  updated_at = now()
+                """,
+                user_id,
+                email,
+                plan,
+            )
+        else:
+            await conn.execute(
+                """
+                INSERT INTO app_users (id, email, plan)
+                VALUES ($1, $2, 'free')
+                ON CONFLICT (id) DO UPDATE SET
+                  email = COALESCE(EXCLUDED.email, app_users.email),
+                  updated_at = now()
+                """,
+                user_id,
+                email,
+            )
 
 
 async def load_profile(user_id: str) -> dict[str, Any] | None:
@@ -40,7 +56,11 @@ async def load_profile(user_id: str) -> dict[str, Any] | None:
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, email, plan, created_at FROM app_users WHERE id = $1",
+            """
+            SELECT id, email, plan, created_at,
+                   stripe_customer_id, stripe_subscription_id, subscription_status
+            FROM app_users WHERE id = $1
+            """,
             user_id,
         )
     if not row:
@@ -50,7 +70,90 @@ async def load_profile(user_id: str) -> dict[str, Any] | None:
         "email": row["email"],
         "plan": row["plan"],
         "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+        "stripe_customer_id": row.get("stripe_customer_id"),
+        "stripe_subscription_id": row.get("stripe_subscription_id"),
+        "subscription_status": row.get("subscription_status"),
     }
+
+
+async def set_user_plan(
+    user_id: str,
+    plan: str,
+    *,
+    stripe_customer_id: str | None = None,
+    stripe_subscription_id: str | None = None,
+    subscription_status: str | None = None,
+    email: str | None = None,
+) -> None:
+    if not is_db_available():
+        return
+    await upsert_user(user_id, email=email)
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE app_users SET
+              plan = $2,
+              stripe_customer_id = COALESCE($3, stripe_customer_id),
+              stripe_subscription_id = COALESCE($4, stripe_subscription_id),
+              subscription_status = COALESCE($5, subscription_status),
+              email = COALESCE($6, email),
+              updated_at = now()
+            WHERE id = $1
+            """,
+            user_id,
+            plan,
+            stripe_customer_id,
+            stripe_subscription_id,
+            subscription_status,
+            email,
+        )
+
+
+async def find_user_id_by_customer(customer_id: str) -> str | None:
+    if not is_db_available():
+        return None
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT id FROM app_users WHERE stripe_customer_id = $1",
+            customer_id,
+        )
+    return row["id"] if row else None
+
+
+async def increment_chat_usage(user_id: str) -> int:
+    """Return new chat_count for today."""
+    if not is_db_available():
+        return -1  # caller uses memory fallback
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            INSERT INTO usage_daily (user_id, day, chat_count)
+            VALUES ($1, CURRENT_DATE, 1)
+            ON CONFLICT (user_id, day) DO UPDATE SET
+              chat_count = usage_daily.chat_count + 1
+            RETURNING chat_count
+            """,
+            user_id,
+        )
+    return int(row["chat_count"]) if row else 0
+
+
+async def get_chat_usage_today(user_id: str) -> int:
+    if not is_db_available():
+        return 0
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT chat_count FROM usage_daily
+            WHERE user_id = $1 AND day = CURRENT_DATE
+            """,
+            user_id,
+        )
+    return int(row["chat_count"]) if row else 0
 
 
 async def save_proposal(user_id: str, p: TradeProposal) -> None:

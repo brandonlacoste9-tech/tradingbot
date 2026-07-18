@@ -38,12 +38,14 @@ async def init_pool() -> bool:
     dsn = url.replace("postgres://", "postgresql://", 1)
     try:
         _pool = await asyncpg.create_pool(dsn, min_size=1, max_size=5, command_timeout=30)
-        schema_path = Path(__file__).resolve().parents[2] / "schema_pr2.sql"
-        sql = schema_path.read_text(encoding="utf-8")
+        base = Path(__file__).resolve().parents[2]
         async with _pool.acquire() as conn:
-            await conn.execute(sql)
+            for name in ("schema_pr2.sql", "schema_pr3.sql"):
+                schema_path = base / name
+                if schema_path.exists():
+                    await conn.execute(schema_path.read_text(encoding="utf-8"))
         _db_ok = True
-        logger.info("Postgres pool ready (PR2 schema applied)")
+        logger.info("Postgres pool ready (PR2+PR3 schema applied)")
         return True
     except Exception as e:  # noqa: BLE001
         logger.warning("Postgres unavailable (%s) — memory tenancy only", e)
