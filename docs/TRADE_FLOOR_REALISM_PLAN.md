@@ -2,9 +2,9 @@
 
 **Product:** IndieTrades · https://indietrades.com  
 **Surface:** `/trade` (paper trading floor)  
-**Status:** Phase 1 + Phase 2 + any-ticker shipped — team bounce on Phase 3  
+**Status:** Phase 1–2 shipped · Phase 3 owner-locked **C hybrid** — see Phase 3 spec  
 **Date:** 2026-07-18  
-**Team status:** [`docs/TRADE_FLOOR_TEAM_STATUS.md`](./TRADE_FLOOR_TEAM_STATUS.md)
+**Team status:** [`TRADE_FLOOR_TEAM_STATUS.md`](./TRADE_FLOOR_TEAM_STATUS.md) · **Phase 3:** [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md)
 
 **Owner intent:** Make `/trade` look and feel like a real stock trading screen, while staying **paper-only**, with **policy + human confirm**, and optional **Grok research** on AI Desk.
 
@@ -137,14 +137,15 @@ Chart sits **above the ticket** in the center column (not full-width under heade
 
 **Out of Phase 2:** drawings, 50 indicators, multi-pane, Level 2, options chain.
 
-### Phase 3 — Order lifecycle (process realism) — **after feel pass**
+### Phase 3 — Order lifecycle (process realism) — **owner-locked C hybrid**
 
-Today many paper fills are effectively **instant**. More real:
+Spec: [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md). Feel pass: ship Phase 1–2; Orders must start meaning something.
 
-- [ ] Working limits when price not through  
-- [ ] Statuses: working / filled / cancelled / policy rejected  
-- [ ] Cancel working order  
-- [ ] Optional: fill rules documented in UI (“paper fills vs last/mark…”)  
+- [ ] Hybrid: aggressive limit → instant paper fill after confirm; passive → **working**  
+- [ ] Cancel working · Day TIF expire  
+- [ ] Statuses: `awaiting_confirm` / `policy_rejected` / `working` / `filled` / `cancelled` / `expired`  
+- [ ] Documented fill rules in UI + short “How fills work”  
+- [ ] No fake tape / Level 2 / SL/TP / bid-ask (out of scope)
 
 ### Phase 4 — Later / optional
 
@@ -231,10 +232,14 @@ See §12 Decision log.
 | 2026-07-18 | **Up/down = pure green / pure red** | Brand accent for PAPER badge + chrome only. Always pair with +/− and % text (a11y). |
 | 2026-07-18 | **Bar source = existing cascade, badge honestly** | Prefer reliable daily OHLC; no fake volume/bars. Empty/error states required. |
 | 2026-07-18 | **Sprint scope locked** | Phase 1 + Phase 2 → stop and feel → then Phase 3. |
+| 2026-07-18 | **Feel pass = ship Phase 1–2** | Polish honesty only; no product-map rethink. Phase 3 job = Orders meaning something. |
+| 2026-07-18 | **Phase 3 fill model = C hybrid** | Aggressive → instant after confirm; passive → working + cancel + Day TIF. Not pure A or pure B first. |
+| 2026-07-18 | **Phase 3 freeze** | Working, cancel, statuses, docs, Day TIF only. Out: SL/TP, L2, bid/ask, partials (unless trivial), multi-leg, live. |
 
-**Voters:** Grok (lead), Harper, Lucas — aligned. Benjamin: no dissent recorded in window.
+**Voters (Phase 1–2):** Grok (lead), Harper, Lucas — aligned. Benjamin: no dissent recorded in window.  
+**Phase 3 owner lock:** C hybrid + freeze (2026-07-18). Team confirm: https://github.com/brandonlacoste9-tech/tradingbot/issues/1
 
 ---
 
-**Status:** Phase 1 + Phase 2 + any-ticker implemented.  
-**Next:** Team bounce on Phase 3 fill model — see [`TRADE_FLOOR_TEAM_STATUS.md`](./TRADE_FLOOR_TEAM_STATUS.md).
+**Status:** Phase 1–2 + any-ticker shipped. Phase 3 **owner-locked C** — implement after team confirm.  
+**Spec:** [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md)

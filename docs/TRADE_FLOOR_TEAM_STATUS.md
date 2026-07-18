@@ -3,148 +3,99 @@
 **Product:** IndieTrades · https://indietrades.com/trade  
 **Audience:** Grok product/eng team (Harper, Lucas, Benjamin + lead)  
 **Date:** 2026-07-18  
-**Owner ask:** Feel pass on what shipped · lock **Phase 3** so we get a **real-looking paper desk**, not a fake live broker or a thin form  
+**Status:** Phase 1–2 **shipped** · Owner **locked Phase 3 = C hybrid + freeze** · team confirm on GitHub  
 
-**Related plan:** [`docs/TRADE_FLOOR_REALISM_PLAN.md`](./TRADE_FLOOR_REALISM_PLAN.md) · decisions §12 still hold  
+**Related plan:** [`TRADE_FLOOR_REALISM_PLAN.md`](./TRADE_FLOOR_REALISM_PLAN.md)  
+**Phase 3 spec:** [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md)  
 
 ---
 
-## 1. What we shipped (since decision lock)
-
-Commits on `main`:
+## 1. What we shipped
 
 | Commit | What |
 |--------|------|
-| `9ae7e4e` | **Phase 1 chrome + Phase 2 chart** |
-| `cb9370c` | **Any ticker** — watchlist Open + ticket auto-watch |
+| `9ae7e4e` | Phase 1 chrome + Phase 2 chart |
+| `cb9370c` | Any ticker — watchlist Open + ticket auto-watch |
 
-### Phase 1 — desk chrome (done)
+- Desk chrome: Net liq · RTH · as-of · watchlist · blotter tabs · TIF Day · PAPER  
+- Chart: candles → line fallback · 1D+1M · pure green/red · source/age · no fake bars  
+- Any US ticker via Open / ticket symbol · localStorage watch · × remove  
 
-- Account strip: **Net liq · Cash · BP · Day P&L · Open P&L**
-- Sticky bar: loud **PAPER only** · **US RTH open/closed** · **Quotes as of** time
-- Watchlist: **Last · Chg%** (pure green/red)
-- Ticket: Buy/Sell · qty · limit · **TIF Day** (UI) · est. notional · **Review paper order**
-- Blotter tabs: **Positions | Orders | Fills** (Orders tab honest: “Phase 3”)
-- Preflight modal unchanged: **policy + human confirm + TTL**
-
-### Phase 2 — chart (done)
-
-- Select symbol → **own SVG chart** (no TradingView embed)
-- **Candles** if OHLC solid; else **line** (same PR fallback)
-- **1D + 1M** toggle; chart **above ticket** (center column)
-- Pure **#22c55e / #ef4444**; brand accent only for PAPER/chrome
-- **Source + age** badge; empty/error if no honest bars — **no fake bars**
-- API: `GET /market/bars`, `GET /market/session`; cascade skips single-bar Massive dead-ends
-
-### Follow-up — any stock (done)
-
-Problem: “I want COST but it’s not on the default list.”
-
-- Watchlist **Open** (type ticker → chart + ticket + quote)
-- Ticket symbol **blur/Enter** auto-adds to watch
-- **×** remove · list **localStorage**-persisted
-- Always quote **active** symbol (not only listed rows)
+**Control plane unchanged:** research (optional) → policy → human confirm → PaperSim.
 
 ---
 
-## 2. Product line we must not blur
+## 2. Real paper desk vs fake live broker
 
-We are building a **real paper trading desk**, not a **fake live broker**.
-
-| Real (good) | Fake / wrong (bad) |
-|-------------|--------------------|
-| Looks and flows like a desk: chart, ticket, blotter, session clock | Looks like live brokerage / confuses “is this money real?” |
-| Real symbols + honest market data badges | Fake Level 2, fake volume, invented bars |
-| Policy + **you confirm** every fill | LLM or auto-submit without confirm |
-| PaperSim book, loud **PAPER** | Silent “live” language, hidden sim |
-| Documented fill rules when we add working orders | Pretending exchange matching we don’t have |
-
-**One-line promise (unchanged):**  
-> Practice stock trading here before you use real money.
-
-**Grok (unchanged):** research bro / opinions on AI Desk — not the order router.
+| Real (good) | Wrong (bad) |
+|-------------|-------------|
+| Desk look + process | Looks like live brokerage |
+| Honest data badges | Fake Level 2 / invented bars |
+| You confirm every order | LLM auto-submit |
+| Loud PAPER + PaperSim | Silent “live” language |
 
 ---
 
-## 3. Feel pass (owner + team)
+## 3. Phase 3 vote — owner lock (team: confirm or dissent)
 
-Please click through production `/trade` after deploy:
+### 1. Feel pass → **Ship**
 
-1. Desk chrome feels “broker,” not “settings form”?  
-2. Chart paints on symbol pick; 1D/1M OK; source badge honest?  
-3. PAPER still impossible to miss?  
-4. Mobile: ticket still reachable under chart?  
-5. Open a non-default ticker (COST / PLTR / SOFI) — path obvious?  
-6. Anything that still feels like a chatbot with a form?
+Ship Phase 1–2 as baseline. Polish only honesty/clarity (as-of, PAPER, source age). Don’t rethink product map — Trade floor is the right **act** surface.
 
-**Owner note so far:** “It’s looking better.” → chrome + chart direction validated; process realism next.
+**Notes:** Chart + any-ticker + blotter chrome are enough to look like a desk **if Orders starts meaning something**. That’s the Phase 3 job, not more chrome.
 
----
+### 2. Fill model → **C Hybrid**
 
-## 4. Next phase — team decision: what makes the desk “real enough”?
+| Why not pure A | Why not pure B first |
+|----------------|----------------------|
+| Instant-only makes Orders theater | Full working-book complexity before users understand the loop |
+| “Instant form → position” undercuts the desk story | Harder to ship, more support surface |
 
-Phase 3 in the plan is **order lifecycle** (process realism). Today most paper fills are **instant after confirm**. That is honest-but-thin: great for time-to-first-fill; weak for “I placed a limit and it’s working.”
+**Hybrid rules:**
 
-### Option A — Instant fill stays (document it)
+- **Aggressive** (limit through last, or market if ever allowed): instant paper fill at last/mark after confirm — first-win **&lt;30s**  
+- **Passive** (buy &lt; last, sell &gt; last): **working** until last trades through, Day TIF expire, or user cancel  
+- Never invent prints, Level 2, or hidden matching  
 
-- Keep post-confirm fill-at-mark/last  
-- UI copy: “Paper fills immediately at mark after you confirm (not exchange matching)”  
-- Orders tab stays empty / educational  
-- **Pros:** simple, fast practice loop  
-- **Cons:** feels less like a real desk; limits don’t “work”
+### 3. Freeze Phase 3 → **Yes**
 
-### Option B — Working orders (recommended direction for “real desk”)
+**In:** working limits · cancel · statuses · documented fill rules · Day TIF only  
 
-- Limit not through → status **working** in Orders  
-- Through / rules → **filled** → Fills + Positions  
-- **Cancel** working  
-- Still: **policy + confirm first**; still **paper only**  
-- UI documents fill rule (e.g. “fills if last/mark crosses limit within poll”)  
-- **Pros:** blotter means something; teaches process  
-- **Cons:** more eng; can confuse beginners if too slow/opaque
+**Out:** SL/TP · Level 2 · bid/ask · partials (unless trivial) · multi-leg · live routing  
 
-### Option C — Hybrid (possible compromise)
+Statuses table: see [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md) §4  
+(`awaiting_confirm` → `working` / `filled` / `cancelled` / `expired` + `policy_rejected`)
 
-- Market-ish / “fill now” path stays instant after confirm  
-- Limit path can rest as working  
-- Default ticket stays limit + Day TIF  
+### 4. What still risks “this is real money”
 
----
+- Any **LIVE** wording without PAPER adjacent (prefer **Quotes · delayed** / market data)  
+- Net liq / BP without **simulated paper account** line  
+- Fill success that looks like broker confirm without **PaperSim / not a broker**  
+- Instant-only with no resting path → users assume exchange matching  
+- Clerk **dev** keys + polished desk (ops trust)  
+- Pro charts without **source/age** (already required — keep it)  
 
-## 5. Open questions for the team (please vote)
+### Lean (locked for implement)
 
-| # | Question | Owner lean (non-binding) |
-|---|----------|---------------------------|
-| 1 | Is **visual desk** (Phase 1–2) good enough to open Phase 3, or more chrome polish first? | Open Phase 3 if feel pass is green |
-| 2 | **A / B / C** for fill model? | **C hybrid** or **B** — without working orders the Orders tab stays a lie |
-| 3 | How “exchange-like” may fills be? Strict cross-only vs soft paper fill at confirm price? | Soft, **documented**, never pretend NBBO match |
-| 4 | Must **PAPER** get louder** when orders rest (working banner)? | Yes — working ≠ live |
-| 5 | Phase 3 scope freeze: working + cancel + statuses only — **no** SL/TP, no Level 2, no bid/ask yet? | Yes freeze |
-| 6 | Anything that still risks “fake trading desk” (users think money is real)? | Audit copy + badges after B/C |
-
-Also: any **must-fix** from feel pass before Phase 3 code?
+**C, not A.** B’s spirit (working + cancel + statuses), A’s speed for aggressive fills. Document always. No fake tape. Human confirm stays sacred.
 
 ---
 
-## 6. Explicit non-goals (still)
+## 4. How to vote on GitHub
 
-- Live multi-tenant brokerage  
-- Fake tape / fake depth  
-- Removing human confirm for “speed”  
-- Rebuilding Webull charting  
+**Issue #1:** https://github.com/brandonlacoste9-tech/tradingbot/issues/1  
 
----
+(Discussions not enabled on repo — Issue is the vote thread.)
 
-## 7. Ask
+Comment:
 
-**Reply with:**
+- **`C`** — agree with hybrid + freeze  
+- **`A` / `B`** — dissent + one sentence why  
+- Optional polish notes (honesty only)
 
-1. Feel pass: **ship / polish / rethink** (one word + notes)  
-2. Fill model: **A / B / C**  
-3. Phase 3 freeze list: agree or edit  
-
-When the team locks §5, eng implements Phase 3 only — no Phase 4 scope creep.
+When team locks **C + freeze**, eng implements **Phase 3 only** — no scope creep.
 
 ---
 
-**Status:** Phase 1 + Phase 2 + any-ticker shipped. **Awaiting team bounce on Phase 3 / real-paper-desk line.**
+**Previous status:** Awaiting Phase 3 bounce.  
+**Now:** Owner vote recorded; awaiting in-thread confirm.
