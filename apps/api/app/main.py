@@ -78,17 +78,45 @@ from app.tools.web_search import web_search
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import logging
+
+    log = logging.getLogger("indietrades.posture")
+    s = get_settings()
+    if s.require_clerk_auth and (s.auth_mode or "").lower() not in ("clerk",):
+        log.error(
+            "REQUIRE_CLERK_AUTH=true but AUTH_MODE=%s — set AUTH_MODE=clerk",
+            s.auth_mode,
+        )
+    if s.require_sim_broker and (s.broker_backend or "").lower() not in ("sim",):
+        log.error(
+            "REQUIRE_SIM_BROKER=true but BROKER_BACKEND=%s — multi-tenant IBKR/Alpaca "
+            "shares one client (footgun). Use sim on SaaS.",
+            s.broker_backend,
+        )
+    if not s.paper_only:
+        log.warning("PAPER_ONLY=false — live paths may be enabled")
     await init_pool()
     yield
     await close_pool()
 
 
-app = FastAPI(
-    title="IndieTrades API",
-    description="IndieTrades (indietrades.com) — multi-user paper desk + market data + admin",
-    version="0.6.5",
-    lifespan=lifespan,
-)
+def _build_app() -> FastAPI:
+    s = get_settings()
+    docs_url = "/docs" if s.expose_openapi_docs else None
+    redoc_url = "/redoc" if s.expose_openapi_docs else None
+    openapi_url = "/openapi.json" if s.expose_openapi_docs else None
+    return FastAPI(
+        title="IndieTrades API",
+        description="IndieTrades (indietrades.com) — multi-user paper desk + market data + admin",
+        version="0.7.0",
+        lifespan=lifespan,
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
+    )
+
+
+app = _build_app()
 
 settings = get_settings()
 _cors = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
@@ -147,16 +175,18 @@ def _ttl() -> int:
 
 
 def _risk_limits(user_id: str | None = None) -> RiskLimits:
+    s = get_settings()
     blocked, _ = is_trading_blocked(user_id)
     return RiskLimits(
-        max_position_pct=settings.default_max_position_pct,
-        max_daily_loss_pct=settings.default_max_daily_loss_pct,
-        max_open_positions=settings.default_max_open_positions,
+        max_position_pct=s.default_max_position_pct,
+        max_daily_loss_pct=s.default_max_daily_loss_pct,
+        max_open_positions=s.default_max_open_positions,
         allowed_order_types=("limit",),
         blacklisted_symbols=(),
         kill_switch=blocked,
-        paper_only=settings.paper_only,
+        paper_only=s.paper_only,
         allow_market_orders=False,
+        allow_outside_rth=bool(s.paper_allow_outside_rth and s.paper_only),
     )
 
 
@@ -175,21 +205,42 @@ async def _mem(user: CurrentUser) -> MemoryStore:
 
 
 async def _build_policy_context(client, symbol: str) -> PolicyContext:
+    """
+    Honest account snapshot for policy.
+    market_open left None → engine computes US RTH from clock.
+    daily_pnl_pct from PaperSim session start when available.
+    """
     account = await client.get_account()
     positions = await client.get_positions()
     pos = await client.get_position(symbol)
     qty = Decimal(str(pos["qty"])) if pos else Decimal("0")
     equity = Decimal(str(account.get("equity") or "0"))
     cash = Decimal(str(account.get("cash") or "0"))
-    # Alpaca does not always expose simple daily pnl %; default 0 for MVP
+
+    daily_pnl_pct = 0.0
+    if hasattr(client, "daily_pnl_pct"):
+        try:
+            daily_pnl_pct = float(client.daily_pnl_pct())  # type: ignore[misc]
+        except Exception:  # noqa: BLE001
+            daily_pnl_pct = 0.0
+    else:
+        # Best-effort from account fields if broker exposes them
+        for key in ("daily_pnl_pct", "equity_change_pct"):
+            if account.get(key) is not None:
+                try:
+                    daily_pnl_pct = float(account[key])
+                    break
+                except (TypeError, ValueError):
+                    pass
+
     return PolicyContext(
         equity=equity,
         cash=cash,
         open_position_count=len(positions),
         current_position_qty=qty,
-        daily_pnl_pct=0.0,
+        daily_pnl_pct=daily_pnl_pct,
         is_paper_connection=client.is_paper_url,
-        market_open=True,  # demo-friendly; policy can still reject other rules
+        market_open=None,  # compute US RTH in policy engine
         now=datetime.now(timezone.utc),
     )
 
@@ -264,22 +315,16 @@ async def _create_proposal_from_args(
     try:
         ctx = await _build_policy_context(client, symbol)
     except BrokerError as e:
-        # Offline / missing keys: synthetic context for local UX demos
-        ctx = PolicyContext(
-            equity=Decimal("100000"),
-            cash=Decimal("100000"),
-            open_position_count=0,
-            current_position_qty=Decimal("0"),
-            daily_pnl_pct=0.0,
-            is_paper_connection=True,
-            market_open=True,
-            now=datetime.now(timezone.utc),
-        )
         mem.audit_event(
             "system",
-            "policy_context_fallback",
+            "policy_context_failed",
             {"error": str(e)},
         )
+        raise HTTPException(
+            400,
+            f"Cannot evaluate risk: account context unavailable ({e}). "
+            "No synthetic $100k fallback.",
+        ) from e
 
     decision = evaluate_proposal(intent, ctx, _risk_limits(user_id))
     client_order_id = f"atb-{uuid.uuid4().hex[:24]}"
@@ -503,32 +548,43 @@ def _llm_ready() -> tuple[bool, str, str | None]:
 
 @app.get("/health")
 async def health():
+    """
+    Public health. Verbose payload when PUBLIC_HEALTH_VERBOSE=true (default).
+    Set PUBLIC_HEALTH_VERBOSE=false for a slim public probe.
+    """
+    s = get_settings()
     client = _client("health")
     llm_on, provider, _ = _llm_ready()
+    base = {
+        "ok": True,
+        "product": "IndieTrades",
+        "version": "0.7.0",
+        "paper_only": s.paper_only,
+        "broker_backend": getattr(client, "backend_name", s.broker_backend),
+        "auth_mode": s.auth_mode,
+        "postgres": is_db_available(),
+        "llm_enabled": llm_on,
+    }
+    if not s.public_health_verbose:
+        return base
+
     controls = get_controls_snapshot()
     breaker = get_llm_breaker().snapshot()
     return {
-        "ok": True,
-        "paper_only": settings.paper_only,
+        **base,
         "confirm_ttl_seconds": _ttl(),
-        "broker_backend": getattr(client, "backend_name", settings.broker_backend),
-        "llm_enabled": llm_on,
         "llm_provider": provider if llm_on else "demo",
-        "auth_mode": settings.auth_mode,
         "tenancy": get_tenant_store().stats(),
         "sim_tenants": sim_tenant_count(),
-        "postgres": is_db_available(),
         "stripe_configured": stripe_configured(),
         "global_kill": controls["global_kill"],
         "llm_circuit": breaker["state"],
-        "admin_api_configured": bool((settings.admin_api_key or "").strip()),
+        "admin_api_configured": bool((s.admin_api_key or "").strip()),
         "fmp_configured": is_fmp_configured(),
         "alphavantage_configured": is_alphavantage_configured(),
         "massive_configured": is_massive_configured(),
         "market_data": providers_status(),
         "plaid": plaid_status(),
-        "version": "0.6.5",
-        "product": "IndieTrades",
     }
 
 
@@ -1017,17 +1073,12 @@ async def confirm_proposal(
     )
     try:
         ctx = await _build_policy_context(client, p.symbol)
-    except BrokerError:
-        ctx = PolicyContext(
-            equity=Decimal("100000"),
-            cash=Decimal("100000"),
-            open_position_count=0,
-            current_position_qty=Decimal("0"),
-            daily_pnl_pct=0.0,
-            is_paper_connection=True,
-            market_open=True,
-            now=datetime.now(timezone.utc),
-        )
+    except BrokerError as e:
+        raise HTTPException(
+            400,
+            f"Cannot confirm: account context unavailable ({e}). "
+            "No synthetic $100k fallback.",
+        ) from e
 
     decision = evaluate_proposal(intent, ctx, _risk_limits(user.id))
     ts = get_tenant_store()
@@ -1211,7 +1262,7 @@ async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
         "llm_provider": settings.llm_provider,
         "market_data": providers_status(),
         "plaid": plaid_status(),
-        "version": "0.6.5",
+        "version": "0.7.0",
         "product": "IndieTrades",
     }
 

@@ -1,183 +1,83 @@
-# IndieTrades (`tradingbot` monorepo)
+# IndieTrades
 
-**Product:** [indietrades.com](https://indietrades.com) — L2 paper-trading AI desk. Claude-style agent orchestration: **AI researches the web**, policy gates risk, human confirms, broker executes (paper-first).
+**Product:** [indietrades.com](https://indietrades.com)  
+**Repo:** [brandonlacoste9-tech/tradingbot](https://github.com/brandonlacoste9-tech/tradingbot)
 
-> **Agents / Grok:** read [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) for full product context, Canada/IBKR constraints, deploy URLs, and next steps.
+Claude-style **paper trading desk**: Grok researches → **pure policy engine** → **human confirm (TTL)** → **per-user PaperSim**.
 
-Repo: [brandonlacoste9-tech/tradingbot](https://github.com/brandonlacoste9-tech/tradingbot)
+> **Agents / Grok:** read [`PROJECT_CONTEXT.md`](./PROJECT_CONTEXT.md) and [`docs/TEAM_HANDOFF.md`](./docs/TEAM_HANDOFF.md).
 
-**Owner constraint:** Canadian residents cannot use Alpaca. Execution path is pivoting to **Interactive Brokers Canada (paper)**.
-
-Control plane (enforced):
+## Control plane (enforced)
 
 ```
 User message
-  → (LLM or demo path) creates TradeProposal
-  → policy engine (pure Python, never LLM)
-  → if rejected → journal + return
-  → if allowed → status = awaiting_confirm + expires_at
-  → PreflightModal (impact + countdown)
-  → user Confirm (within TTL)
-  → re-check status + TTL
-  → Alpaca paper submit (with client_order_id)
-  → journal + audit
+  → agent (Grok or demo tools) propose / hold only
+  → policy engine (pure Python — never the LLM)
+  → awaiting_confirm + TTL
+  → Preflight UI → human Confirm
+  → re-check policy + TTL
+  → PaperSim submit (client_order_id)
+  → journal + audit (per tenant)
 ```
 
-`decide_hold` always succeeds and only journals.  
-**No path** lets the LLM (or the demo) submit an order without the confirm gate.
+**Hard rules:** LLM never submits. Policy never skipped. Paper default.  
+**Canada:** no Alpaca for the owner. SaaS default broker is **sim**. IBKR is owner-local only (never multi-tenant on one Render service).
 
----
+## Live
 
-## Quick start (&lt; 10 minutes, paper only)
+| Surface | URL |
+|---------|-----|
+| Web | Netlify / indietrades.com |
+| API | https://tradingbot-api-0990.onrender.com |
+| Health | `GET /health` |
 
-### Prerequisites
+Stack: Clerk JWT · Postgres · Stripe Checkout · xAI Grok · FMP/AV/Massive data.
 
-- Docker Desktop
-- Python 3.11+
-- Node.js 20+
-- Free [Alpaca](https://app.alpaca.markets) **paper** API keys
+## Local API
 
-### 1. Env
-
-```bash
-cd tradingbot
-cp .env.example .env
-# Edit .env — set ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY (paper)
-```
-
-### 2. Database
-
-```bash
-docker compose up -d db
-```
-
-### 3. Backend
-
-```bash
-cd apps/api
-python -m venv .venv
-
-# Windows PowerShell:
+```powershell
+cd apps\api
 .\.venv\Scripts\Activate.ps1
-# macOS/Linux:
-# source .venv/bin/activate
-
 pip install -r requirements.txt
+# optional: docker compose up -d db
+$env:AUTH_MODE="disabled"
+$env:BROKER_BACKEND="sim"
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs: http://localhost:8000/docs
+## Local web
 
-### 4. Frontend
-
-```bash
-cd apps/web
+```powershell
+cd apps\web
+copy .env.local.example .env.local   # set NEXT_PUBLIC_API_URL + Clerk keys
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000
+## Production posture (Render)
 
-### 5. Try it
-
-1. “What is my buying power?”
-2. “Propose a limit buy of 1 share of SPY”
-3. Confirm in the preflight modal (countdown TTL)
-4. Check journal / orders in the UI
-
----
-
-## What’s included
-
-| Area | Status |
-|------|--------|
-| Policy engine (pure + tests) | Yes |
-| Preflight + Confirm TTL (default 180s) | Yes |
-| `client_order_id` idempotency | Yes |
-| `decide_hold` / do-nothing | Yes |
-| Connection validate → `last_validated` + `is_paper` | Yes |
-| Keyword demo chat (no LLM key required) | Yes |
-| Real LLM tool loop | Stub in `agent/loop.py` |
-| Live trading | **Not wired** |
-| Clerk / multi-tenant encrypted vault | **Not wired** |
-| Scheduled bots | **Not wired** |
-
-## Safety
-
-- Paper-only by construction (`PAPER_ONLY=true`, paper base URL)
-- Secrets never leave the backend
-- Policy is pure functions + unit tests
-- Every order has a unique `client_order_id`
-- Proposals expire server-side
-
-## Tests
-
-```bash
-cd apps/api
-pytest -q
+```env
+AUTH_MODE=clerk
+BROKER_BACKEND=sim
+PAPER_ONLY=true
+REQUIRE_CLERK_AUTH=true
+REQUIRE_SIM_BROKER=true
+EXPOSE_OPENAPI_DOCS=false
+PUBLIC_HEALTH_VERBOSE=false
 ```
 
-## Deploy (Netlify — frontend only)
+## Docs
 
-Netlify hosts the **web UI** (`apps/web`). It does **not** run the FastAPI backend.
+| Doc | Topic |
+|-----|--------|
+| `docs/TEAM_HANDOFF.md` | What’s shipped |
+| `docs/PR1_AUTH_TENANCY.md` | Auth |
+| `docs/PR2_POSTGRES.md` | Persistence |
+| `docs/PR3_STRIPE.md` / `STRIPE_RUNBOOK.md` | Billing |
+| `docs/PR4_QUOTAS_KILL_SWITCH.md` | Quotas / admin |
+| `docs/MASSIVE_MARKET_DATA.md` | Market data |
+| `docs/IBKR_SETUP.md` | Owner IBKR paper |
 
-### Netlify settings (or use root `netlify.toml`)
+## Legal
 
-| Setting | Value |
-|---------|--------|
-| Base directory | `apps/web` |
-| Build command | `npm run build` |
-| Publish directory | `apps/web/out` (with base set, `out`) |
-| Node | 20 |
-
-### Environment variables (Netlify UI → Site config → Environment)
-
-```
-NEXT_PUBLIC_API_URL=https://YOUR-API-HOST
-```
-
-Without this, the UI loads but shows **API down** (it expects `http://localhost:8000` only in local dev).
-
-### Why you saw “Page not found”
-
-Deploying from the **repo root** publishes nothing useful (no `index.html`). The app must build from `apps/web` with publish dir `out` (static export).
-
-### IBKR paper (Canada — local)
-
-Production Netlify/Render stays on **PaperSim**. For real IBKR paper fills on your PC:
-
-1. Read **[docs/IBKR_SETUP.md](./docs/IBKR_SETUP.md)**  
-2. IB Gateway → **Paper** → API port **4002**  
-3. `.\scripts\run-api-ibkr.ps1`  
-4. `.\scripts\check-ibkr.ps1`  
-5. Web UI with `NEXT_PUBLIC_API_URL=http://localhost:8000`
-
-### Backend (Render)
-
-This repo includes a **Render Blueprint** at `render.yaml` for the FastAPI API.
-
-1. [Render Dashboard → New → Blueprint](https://dashboard.render.com/select-repo?type=blueprint)
-2. Connect `brandonlacoste9-tech/tradingbot`
-3. Apply the blueprint → service **`tradingbot-api`**
-4. In the service → **Environment**, set secrets:
-   - `ALPACA_API_KEY_ID` (paper)
-   - `ALPACA_API_SECRET_KEY` (paper)
-5. After deploy, note the service URL, e.g. `https://tradingbot-api.onrender.com`
-6. On **Netlify** → Site env:
-   - `NEXT_PUBLIC_API_URL=https://tradingbot-api.onrender.com`
-7. Trigger a Netlify redeploy so the frontend picks up the API URL
-
-Health check: `GET /health`
-
-Local API still works: `uvicorn app.main:app --reload --port 8000` from `apps/api`.
-
-## Next moves
-
-- Wire real LLM tool-calling into `agent/loop.py` using `tools/schemas.py`
-- Encrypted per-user connections + Clerk
-- Journal history + equity curve
-- BYO-keys vs Broker API compliance matrix
-
----
-
-**Not investment advice.** Educational paper-trading tooling only. Past performance does not predict future results. Always use paper keys until you understand the system end-to-end.
+Educational paper trading. Not investment advice. Not a broker.

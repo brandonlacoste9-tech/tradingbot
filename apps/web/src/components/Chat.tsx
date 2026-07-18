@@ -72,7 +72,7 @@ export default function Chat({
       id: "welcome",
       role: "system",
       text:
-        "Shipboard online. Quick actions below, or type freely. " +
+        "Desk online. Quick actions below, or type freely. " +
         "Orders never leave the paper book until you confirm preflight.",
     },
   ]);

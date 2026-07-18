@@ -11,7 +11,7 @@ export default function HowItWorks() {
   return (
     <div className="hud-panel !py-3">
       <div className="hud-panel-header !mb-2 !border-0 !pb-0">
-        <span className="hud-label">Bridge pipeline</span>
+        <span className="hud-label">Desk pipeline</span>
         <span className="font-mono text-[10px] text-mist">control plane</span>
       </div>
       <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

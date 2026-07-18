@@ -65,6 +65,13 @@ class Settings(BaseSettings):
     default_max_daily_loss_pct: float = 3.0
     default_max_open_positions: int = 10
     paper_only: bool = True
+    # Paper: allow proposals outside US RTH (still flagged in impact.outside_rth)
+    paper_allow_outside_rth: bool = True
+    # Production guards (log/assert on boot when true)
+    require_clerk_auth: bool = False  # set true on Render when AUTH_MODE must be clerk
+    require_sim_broker: bool = False  # set true to block ibkr/alpaca on shared SaaS
+    expose_openapi_docs: bool = True  # set false in production
+    public_health_verbose: bool = True  # set false to slim /health
 
     # Stripe (PR3) — leave empty to disable paid checkout
     stripe_secret_key: str = ""

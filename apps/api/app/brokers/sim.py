@@ -107,6 +107,15 @@ class PaperSimBroker:
             eq += pos["qty"] * self._mark(sym)
         return eq
 
+    def daily_pnl_pct(self) -> float:
+        """PnL % vs session start equity (starting cash for this paper book)."""
+        with self._lock:
+            start = self._equity_start
+            if start <= 0:
+                return 0.0
+            eq = self._equity()
+            return float(((eq - start) / start) * Decimal("100"))
+
     async def validate_connection(self) -> dict[str, Any]:
         account = await self.get_account()
         return {

@@ -40,6 +40,8 @@ class RiskLimits:
     kill_switch: bool = False
     paper_only: bool = True
     allow_market_orders: bool = False
+    # Paper desks often trade evenings; still compute real session for honesty.
+    allow_outside_rth: bool = True
 
 
 @dataclass(frozen=True)
@@ -131,7 +133,10 @@ def evaluate_proposal(
     market_open = ctx.market_open
     if market_open is None:
         market_open = _is_us_equity_regular_session(now)
-    if not market_open:
+    outside_rth = not market_open
+    if outside_rth and not (
+        limits.allow_outside_rth and ctx.is_paper_connection
+    ):
         reasons.append("US equity regular session is closed (policy gate)")
 
     if ctx.open_position_count >= limits.max_open_positions and intent.side == "buy":
@@ -183,6 +188,8 @@ def evaluate_proposal(
         "cash": str(ctx.cash),
         "open_positions": ctx.open_position_count,
         "daily_pnl_pct": ctx.daily_pnl_pct,
+        "market_open": market_open,
+        "outside_rth": outside_rth,
         "max_loss_scenario": (
             f"Full loss of estimated notional ${notional:.2f}"
             if notional is not None

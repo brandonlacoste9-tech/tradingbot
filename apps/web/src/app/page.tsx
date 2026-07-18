@@ -113,7 +113,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl space-y-4 px-4 py-5 sm:px-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="hud-label mb-1">Command bridge</p>
+              <p className="hud-label mb-1">Paper desk</p>
               <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
                 IndieTrades
               </h1>
@@ -279,8 +279,8 @@ export default function HomePage() {
       </div>
 
       <footer className="border-t border-line/60 py-5 text-center font-mono text-[11px] text-slate-600">
-        IndieTrades · indietrades.com · shipboard paper desk · not investment
-        advice · not a broker
+        IndieTrades · indietrades.com · educational paper trading · not
+        investment advice · not a broker
         {healthInfo?.version ? ` · API v${healthInfo.version}` : ""}
       </footer>
     </main>

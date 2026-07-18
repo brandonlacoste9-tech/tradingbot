@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IndieTrades — Shipboard paper desk",
+  title: "IndieTrades — Paper trading desk",
   description:
     "IndieTrades (indietrades.com): research → policy → confirm. Multi-user paper trading. Not investment advice.",
 };
@@ -40,7 +40,7 @@ function AuthChrome() {
             IndieTrades
           </div>
           <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/60">
-            shipboard · paper
+            paper desk
           </div>
         </div>
       </div>

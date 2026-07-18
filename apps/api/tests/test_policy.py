@@ -63,6 +63,36 @@ def test_rejects_kill_switch():
     assert "kill switch" in (d.rejection_reason or "").lower()
 
 
+def test_outside_rth_allowed_for_paper_when_flag_set():
+    d = evaluate_proposal(
+        _intent(),
+        _ctx(market_open=False),
+        RiskLimits(allow_outside_rth=True),
+    )
+    assert d.allowed is True
+    assert d.impact and d.impact.get("outside_rth") is True
+
+
+def test_outside_rth_rejected_when_not_allowed():
+    d = evaluate_proposal(
+        _intent(),
+        _ctx(market_open=False),
+        RiskLimits(allow_outside_rth=False),
+    )
+    assert d.allowed is False
+    assert "session is closed" in (d.rejection_reason or "").lower()
+
+
+def test_daily_loss_breaker():
+    d = evaluate_proposal(
+        _intent(),
+        _ctx(daily_pnl_pct=-5.0),
+        RiskLimits(max_daily_loss_pct=3.0),
+    )
+    assert d.allowed is False
+    assert "daily loss" in (d.rejection_reason or "").lower()
+
+
 def test_rejects_oversized_position():
     # 5% of 100k = 5000; notional 10000 should fail
     d = evaluate_proposal(
@@ -141,6 +171,11 @@ def test_proposal_ttl_expiry():
 
 
 def test_rejects_closed_market_when_flagged():
-    d = evaluate_proposal(_intent(), _ctx(market_open=False), RiskLimits())
+    # Default allow_outside_rth=True for paper; force strict RTH for this case.
+    d = evaluate_proposal(
+        _intent(),
+        _ctx(market_open=False),
+        RiskLimits(allow_outside_rth=False),
+    )
     assert d.allowed is False
     assert "session" in (d.rejection_reason or "").lower()

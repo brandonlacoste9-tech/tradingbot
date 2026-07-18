@@ -151,8 +151,12 @@ Cascade: **FMP → Alpha Vantage → Massive → sim**
 | Priority | Item |
 |----------|------|
 | P0 | ~~Enable Render **Postgres**~~ **DONE 2026-07-18** (`tradingbot-db`, `postgres: true`) |
-| P1 | Stripe **test/live** fully wired end-to-end for paying Pro |
+| P1 | Stripe configured live — **confirm one real Checkout + webhook plan flip** |
+| P1 | ~~Policy honesty (0.7.0)~~ — real US RTH / `allow_outside_rth` for paper, sim `daily_pnl_pct`, no synthetic $100k on context fail |
+| P1 | ~~Prod posture flags in code~~ — set on Render: `REQUIRE_CLERK_AUTH=true`, `REQUIRE_SIM_BROKER=true`, `EXPOSE_OPENAPI_DOCS=false`, `PUBLIC_HEALTH_VERBOSE=false` |
 | P1 | Clerk allowed origins / production polish if any edge 401s |
+| P2 | Landing page (desk-first today; marketing still thin) |
+| P2 | Strip residual “Shipboard” copy — **done in 0.7.0 UI metadata** |
 | P2 | Onboarding (disclaimer accept, risk persona) |
 | P2 | Plaid Link UI (keys already on API) |
 | P3 | Owner IBKR Gateway (local only — not multi-tenant SaaS default) |

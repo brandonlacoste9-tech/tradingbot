@@ -510,7 +510,7 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
     return {
         "mode": "demo",
         "assistant_text": (
-            "Shipboard demo mode (Grok LLM offline). I can still run tools:\n"
+            "Demo mode (Grok LLM offline). I can still run tools:\n"
             "· Quote AAPL / NVDA\n"
             "· Research NVDA AI chips\n"
             "· What is my buying power?\n"
