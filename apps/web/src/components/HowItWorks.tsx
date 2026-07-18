@@ -15,7 +15,7 @@ export default function HowItWorks() {
         <span className="hud-label !mb-0 mr-1">How it works</span>
         {STEPS.map((s, i) => (
           <span key={s.n} className="flex items-center gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full border border-line bg-ink/50 px-2 py-0.5 font-mono text-[11px] text-slate-300">
+            <span className="inline-flex items-center gap-1 rounded-full border border-line bg-ink/50 px-2 py-0.5 font-mono text-xs text-slate-300">
               <span className="text-accent">{s.n}</span>
               {s.t}
             </span>
@@ -29,7 +29,7 @@ export default function HowItWorks() {
       </div>
       <a
         href="/trade"
-        className="shrink-0 rounded-full border border-good/30 bg-good/10 px-2.5 py-1 text-[11px] font-semibold text-good hover:bg-good/20"
+        className="shrink-0 rounded-full border border-good/30 bg-good/10 px-2.5 py-1 text-xs font-semibold text-good hover:bg-good/20"
       >
         Trade floor
       </a>

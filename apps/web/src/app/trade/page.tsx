@@ -320,7 +320,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
       <div className="sticky top-0 z-30 border-b border-good/30 bg-good/10 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-good">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/15 px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-wider text-good">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
               Paper only
             </span>
@@ -437,7 +437,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <section className="hud-panel lg:col-span-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Watchlist</h2>
-              <span className="font-mono text-[10px] uppercase text-mist">
+              <span className="font-mono text-xs uppercase text-mist">
                 live-ish
               </span>
             </div>
@@ -466,7 +466,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                         </span>
                         {pct && (
                           <span
-                            className={`font-mono text-[10px] ${
+                            className={`font-mono text-xs ${
                               up ? "text-good" : down ? "text-bad" : "text-mist"
                             }`}
                           >
@@ -512,7 +512,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <section className="hud-panel lg:col-span-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Order ticket</h2>
-              <span className="rounded-full border border-good/30 bg-good/10 px-2 py-0.5 font-mono text-[10px] font-bold text-good">
+              <span className="rounded-full border border-good/30 bg-good/10 px-2 py-0.5 font-mono text-xs font-bold text-good">
                 PAPER
               </span>
             </div>
@@ -542,7 +542,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 </button>
               </div>
               <label className="block">
-                <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                <span className="mb-1 block font-mono text-xs uppercase text-mist">
                   Symbol
                 </span>
                 <input
@@ -555,7 +555,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                  <span className="mb-1 block font-mono text-xs uppercase text-mist">
                     Qty
                   </span>
                   <input
@@ -567,7 +567,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                  <span className="mb-1 block font-mono text-xs uppercase text-mist">
                     Limit $
                   </span>
                   <input
@@ -586,7 +586,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                     key={q}
                     type="button"
                     onClick={() => setQty(q)}
-                    className={`rounded-full px-2.5 py-1 font-mono text-[11px] ${
+                    className={`rounded-full px-2.5 py-1 font-mono text-xs ${
                       qty === q
                         ? "bg-accent/20 text-accent"
                         : "border border-line text-mist hover:border-accent/40"
@@ -599,14 +599,14 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                   <button
                     type="button"
                     onClick={() => setQty(String(maxShares))}
-                    className="rounded-full border border-good/40 px-2.5 py-1 font-mono text-[11px] text-good hover:bg-good/10"
+                    className="rounded-full border border-good/40 px-2.5 py-1 font-mono text-xs text-good hover:bg-good/10"
                   >
                     Max {maxShares}
                   </button>
                 )}
               </div>
               <label className="block">
-                <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                <span className="mb-1 block font-mono text-xs uppercase text-mist">
                   Why this trade? (policy requires a reason)
                 </span>
                 <textarea
@@ -648,7 +648,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               >
                 {busy ? "Checking policy…" : "Review order →"}
               </button>
-              <p className="text-center text-[11px] leading-relaxed text-mist">
+              <p className="text-center text-xs leading-relaxed text-mist">
                 Nothing fills until you confirm. PaperSim only.
               </p>
             </form>
@@ -659,7 +659,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             <div className="hud-panel flex-1">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-white">Positions</h2>
-                <span className="font-mono text-[10px] text-mist">tap to trade</span>
+                <span className="font-mono text-xs text-mist">tap to trade</span>
               </div>
               {positions.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line/80 px-4 py-8 text-center">
@@ -674,7 +674,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="font-mono text-[10px] uppercase text-mist">
+                    <thead className="font-mono text-xs uppercase text-mist">
                       <tr>
                         <th className="pb-2 pr-2">Sym</th>
                         <th className="pb-2 pr-2">Qty</th>
@@ -713,7 +713,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             <div className="hud-panel">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-white">Recent fills</h2>
-                <span className="font-mono text-[10px] text-mist">paper</span>
+                <span className="font-mono text-xs text-mist">paper</span>
               </div>
               {orders.length === 0 ? (
                 <p className="text-sm text-mist">
@@ -727,7 +727,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                     .map((o) => (
                       <li
                         key={String(o.id || o.client_order_id)}
-                        className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2 font-mono text-[11px] text-slate-300"
+                        className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2 font-mono text-xs text-slate-300"
                       >
                         <span className="font-semibold text-good">
                           {String(o.status || "order")}
@@ -780,7 +780,7 @@ function Stat({
 }) {
   return (
     <div className="rounded-xl border border-line/70 bg-panel/60 px-3 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-wider text-mist">
+      <p className="font-mono text-xs uppercase tracking-wider text-mist">
         {label}
       </p>
       <p
@@ -798,7 +798,7 @@ function Tip({ title, body }: { title: string; body: string }) {
   return (
     <div>
       <p className="text-xs font-semibold text-white">{title}</p>
-      <p className="mt-1 text-[12px] leading-relaxed text-mist">{body}</p>
+      <p className="mt-1 text-sm leading-relaxed text-mist">{body}</p>
     </div>
   );
 }

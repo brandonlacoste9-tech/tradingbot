@@ -65,7 +65,7 @@ export default function HowPaperWorksPage() {
   return (
     <SeoPageShell>
       <JsonLd data={jsonLd} />
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-accent">
+      <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent">
         Learn
       </p>
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">

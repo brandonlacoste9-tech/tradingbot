@@ -93,7 +93,7 @@ export default function StatusStrip({
           <button
             type="button"
             onClick={onOpenPlans}
-            className="rounded-full border border-accent/50 bg-accent/15 px-3 py-1 text-[11px] font-semibold text-accent hover:bg-accent/25"
+            className="rounded-full border border-accent/50 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent hover:bg-accent/25"
           >
             Plans
           </button>
@@ -136,7 +136,7 @@ export default function StatusStrip({
 
       {pct != null && used != null && limit != null && (
         <div className="min-w-[200px] max-w-sm">
-          <div className="mb-1 flex justify-between text-[10px] text-mist">
+          <div className="mb-1 flex justify-between text-xs text-mist">
             <span>Daily chats</span>
             <span className="font-mono text-slate-200">
               {used}/{limit}

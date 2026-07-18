@@ -51,7 +51,7 @@ export default function AiPaperTradingPage() {
   return (
     <SeoPageShell>
       <JsonLd data={jsonLd} />
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-accent">
+      <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent">
         AI paper trading
       </p>
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">
@@ -68,7 +68,7 @@ export default function AiPaperTradingPage() {
 
       <section className="mt-12 space-y-3">
         <h2 className="text-xl font-semibold text-white">The control plane</h2>
-        <pre className="overflow-x-auto rounded-xl border border-line bg-panel/60 p-4 font-mono text-[12px] text-slate-300">
+        <pre className="overflow-x-auto rounded-xl border border-line bg-panel/60 p-4 font-mono text-sm text-slate-300">
 {`Research (Grok / tools)
   → Policy engine (pure code)
   → awaiting_confirm + TTL

@@ -147,7 +147,7 @@ export default function PlansPage() {
                 <div className="text-2xl font-bold tabular-nums text-white">
                   $0
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                <div className="font-mono text-xs uppercase tracking-wider text-mist">
                   forever
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function PlansPage() {
 
           {/* Pro $29 */}
           <article className="hud-panel relative flex flex-col ring-1 ring-accent/35">
-            <div className="absolute -top-3 right-4 rounded-full border border-accent/40 bg-accent/15 px-3 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">
+            <div className="absolute -top-3 right-4 rounded-full border border-accent/40 bg-accent/15 px-3 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider text-accent">
               popular
             </div>
             <div className="hud-panel-header !border-0 !pb-0">
@@ -188,7 +188,7 @@ export default function PlansPage() {
                   ~$29
                   <span className="text-sm font-normal text-mist"> CAD</span>
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                <div className="font-mono text-xs uppercase tracking-wider text-mist">
                   per month
                 </div>
               </div>
@@ -210,7 +210,7 @@ export default function PlansPage() {
                 checkoutPlan="pro"
                 label="Get Indie Pro — Checkout"
               />
-              <p className="text-[11px] leading-relaxed text-mist">
+              <p className="text-xs leading-relaxed text-mist">
                 Promo codes accepted on Stripe Checkout (e.g.{" "}
                 <span className="font-mono text-slate-300">INDIEPRO</span>).
               </p>
@@ -229,7 +229,7 @@ export default function PlansPage() {
                   ~$59
                   <span className="text-sm font-normal text-mist"> CAD</span>
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                <div className="font-mono text-xs uppercase tracking-wider text-mist">
                   per month
                 </div>
               </div>
@@ -251,7 +251,7 @@ export default function PlansPage() {
                 checkoutPlan="pro_plus"
                 label="Get Indie Pro+ — Checkout"
               />
-              <p className="text-[11px] leading-relaxed text-mist">
+              <p className="text-xs leading-relaxed text-mist">
                 Same paper-only control plane as Free and Indie Pro.
               </p>
             </div>
@@ -274,7 +274,7 @@ export default function PlansPage() {
           <div className="mt-8 overflow-x-auto rounded-2xl border border-line">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
-                <tr className="border-b border-line bg-ink/60 font-mono text-[11px] uppercase tracking-wider text-mist">
+                <tr className="border-b border-line bg-ink/60 font-mono text-xs uppercase tracking-wider text-mist">
                   <th className="px-4 py-3 font-medium">Feature</th>
                   <th className="px-4 py-3 font-medium">Free</th>
                   <th className="px-4 py-3 font-medium text-accent">Indie Pro</th>
@@ -388,7 +388,7 @@ export default function PlansPage() {
             </Link>
           </div>
         </div>
-        <p className="mt-8 text-center font-mono text-[11px] text-slate-600">
+        <p className="mt-8 text-center font-mono text-xs text-slate-600">
           IndieTrades · indietrades.com · educational paper trading · not
           investment advice · not a broker
         </p>
@@ -400,7 +400,7 @@ export default function PlansPage() {
 function Check({ accent }: { accent?: boolean }) {
   return (
     <span
-      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] ${
+      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-xs ${
         accent ? "bg-accent/20 text-accent" : "bg-good/15 text-good"
       }`}
       aria-hidden

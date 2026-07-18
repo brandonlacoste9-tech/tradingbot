@@ -54,7 +54,7 @@ export default function WhyPaper({ defaultOpen = true }: Props) {
           <a
             href="/trade"
             onClick={(e) => e.stopPropagation()}
-            className="hidden rounded-full border border-good/40 bg-good/10 px-2.5 py-1 text-[11px] font-semibold text-good hover:bg-good/20 sm:inline"
+            className="hidden rounded-full border border-good/40 bg-good/10 px-2.5 py-1 text-xs font-semibold text-good hover:bg-good/20 sm:inline"
           >
             Open floor →
           </a>
@@ -81,7 +81,7 @@ export default function WhyPaper({ defaultOpen = true }: Props) {
                 <p className="mt-1.5 text-sm font-semibold text-white">
                   {r.title}
                 </p>
-                <p className="mt-1 text-[12px] leading-relaxed text-mist">
+                <p className="mt-1 text-sm leading-relaxed text-mist">
                   {r.body}
                 </p>
               </div>

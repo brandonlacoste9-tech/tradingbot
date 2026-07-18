@@ -83,7 +83,7 @@ export default function PreflightModal({ proposal, onClose }: Props) {
       <div className="w-full max-w-lg rounded-t-2xl border border-line bg-panel shadow-2xl sm:rounded-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
               Paper preflight
             </p>
             <h2
@@ -175,7 +175,7 @@ export default function PreflightModal({ proposal, onClose }: Props) {
             </div>
             <p className="mt-1 text-slate-200">{proposal.reason}</p>
           </div>
-          <div className="truncate font-mono text-[10px] text-slate-600">
+          <div className="truncate font-mono text-xs text-slate-600">
             client_order_id: {proposal.client_order_id}
           </div>
           {error && (
@@ -224,7 +224,7 @@ export default function PreflightModal({ proposal, onClose }: Props) {
 function Mini({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-line/80 bg-ink/40 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-slate-500">
+      <div className="text-xs uppercase tracking-wide text-slate-500">
         {label}
       </div>
       <div className="mt-0.5 truncate font-mono text-xs text-slate-100">

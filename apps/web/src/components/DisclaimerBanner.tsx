@@ -26,7 +26,7 @@ export default function DisclaimerBanner() {
 
   if (acked) {
     return (
-      <div className="border-b border-warn/25 bg-gradient-to-r from-warn/10 via-panel to-warn/10 px-4 py-2 text-center font-mono text-[11px] leading-snug text-warn/90">
+      <div className="border-b border-warn/25 bg-gradient-to-r from-warn/10 via-panel to-warn/10 px-4 py-2 text-center font-mono text-xs leading-snug text-warn/90">
         <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-warn align-middle" />
         <strong className="font-semibold">PAPER / EDUCATIONAL</strong>
         <span className="text-warn/70">

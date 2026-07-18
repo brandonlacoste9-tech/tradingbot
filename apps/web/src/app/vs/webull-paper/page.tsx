@@ -76,7 +76,7 @@ export default function VsWebullPage() {
   return (
     <SeoPageShell maxWidth="max-w-4xl">
       <JsonLd data={jsonLd} />
-      <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-accent">
+      <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-accent">
         Comparison
       </p>
       <h1 className="mt-3 text-3xl font-bold tracking-tight text-white md:text-4xl">
@@ -91,7 +91,7 @@ export default function VsWebullPage() {
 
       <div className="mt-12 overflow-x-auto rounded-2xl border border-line">
         <table className="w-full min-w-[560px] text-left text-sm">
-          <thead className="border-b border-line bg-panel/80 text-[11px] uppercase tracking-wider text-mist">
+          <thead className="border-b border-line bg-panel/80 text-xs uppercase tracking-wider text-mist">
             <tr>
               <th className="px-4 py-3 font-semibold">Topic</th>
               <th className="px-4 py-3 font-semibold text-accent">IndieTrades</th>

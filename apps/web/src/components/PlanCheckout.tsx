@@ -182,7 +182,7 @@ function PlanCheckoutBody({
         >
           {busy ? "Opening…" : "Manage subscription"}
         </button>
-        <p className="font-mono text-[11px] text-mist">
+        <p className="font-mono text-xs text-mist">
           Current: <span className="text-accent">{plan.toUpperCase()}</span>
         </p>
       </div>
@@ -217,7 +217,7 @@ function PlanCheckoutBody({
                 : "Stripe unavailable"}
           </button>
         )}
-        <p className="font-mono text-[11px] text-mist">
+        <p className="font-mono text-xs text-mist">
           Current: <span className="text-accent">{plan.toUpperCase()}</span>
           {stripeReady ? " · Stripe ready" : ""}
         </p>

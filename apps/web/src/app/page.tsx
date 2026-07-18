@@ -168,7 +168,7 @@ function HomePageBody({
                 >
                   Open Trade floor →
                 </a>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                <span className="font-mono text-xs uppercase tracking-wider text-mist">
                   paper only
                 </span>
               </div>
@@ -285,7 +285,7 @@ function HomePageBody({
                         <div className="font-semibold tracking-wide text-white">
                           {p.symbol}
                         </div>
-                        <div className="font-mono text-[11px] text-mist">
+                        <div className="font-mono text-xs text-mist">
                           qty {p.qty}
                           {p.avg_entry_price
                             ? ` · avg ${p.avg_entry_price}`
@@ -325,7 +325,7 @@ function HomePageBody({
                       key={e.id}
                       className="rounded-xl border border-line/80 bg-ink/50 px-3 py-2 text-sm text-slate-300"
                     >
-                      <div className="font-mono text-[10px] text-accent/50">
+                      <div className="font-mono text-xs text-accent/50">
                         {new Date(e.created_at).toLocaleString()}
                       </div>
                       <p className="mt-1 whitespace-pre-wrap leading-relaxed">
@@ -356,7 +356,7 @@ function HomePageBody({
         </div>
       </div>
 
-      <footer className="border-t border-line/60 py-5 text-center font-mono text-[11px] text-slate-600">
+      <footer className="border-t border-line/60 py-5 text-center font-mono text-xs text-slate-600">
         IndieTrades · indietrades.com · educational paper trading · not
         investment advice · not a broker
         {healthInfo?.version ? ` · API v${healthInfo.version}` : ""}
@@ -430,7 +430,7 @@ function Panel({
           <h3 className="text-sm font-semibold text-white">{title}</h3>
         </div>
         {badge && (
-          <span className="rounded-full border border-accent/25 bg-accent/5 px-2 py-0.5 font-mono text-[10px] text-accent">
+          <span className="rounded-full border border-accent/25 bg-accent/5 px-2 py-0.5 font-mono text-xs text-accent">
             {badge}
           </span>
         )}

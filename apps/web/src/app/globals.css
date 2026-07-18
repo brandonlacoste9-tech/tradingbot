@@ -73,7 +73,7 @@
 }
 
 html {
-  font-size: 112.5%; /* 18px base — one step larger than 16px */
+  font-size: 125%; /* 20px base — second step up for readability */
 }
 
 body {
@@ -168,7 +168,7 @@ body {
 
 .hud-label {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.75rem; /* was 10px → ~12px */
+  font-size: 0.8125rem; /* ~13px at 20px root */
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -179,7 +179,7 @@ body {
   border-radius: 0.75rem;
   border: 1px solid var(--panel-border);
   background: var(--stat-bg);
-  padding: 0.7rem 0.85rem;
+  padding: 0.8rem 0.95rem;
   box-shadow: 0 0 12px var(--panel-glow);
 }
 
@@ -190,9 +190,9 @@ body {
   border-radius: 9999px;
   border: 1px solid var(--chip-border);
   background: var(--chip-bg);
-  padding: 0.3rem 0.7rem;
+  padding: 0.35rem 0.8rem;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.8125rem; /* was 11px */
+  font-size: 0.875rem; /* ~14px */
   color: var(--fg-muted);
 }
 
@@ -200,8 +200,8 @@ body {
   border-radius: 0.75rem;
   border: 1px solid color-mix(in srgb, rgb(var(--c-accent)) 40%, transparent);
   background: color-mix(in srgb, rgb(var(--c-accent)) 10%, transparent);
-  padding: 0.45rem 0.85rem;
-  font-size: 0.875rem; /* was 12px */
+  padding: 0.5rem 0.95rem;
+  font-size: 0.9375rem; /* ~15px */
   font-weight: 500;
   color: rgb(var(--c-accent));
   transition: 0.15s ease;
@@ -216,8 +216,8 @@ body {
 .hud-btn-primary {
   border-radius: 0.75rem;
   background: rgb(var(--c-accent));
-  padding: 0.7rem 1.1rem;
-  font-size: 1rem; /* was 14px */
+  padding: 0.75rem 1.2rem;
+  font-size: 1.0625rem; /* ~17px */
   font-weight: 600;
   color: var(--primary-btn-fg);
   box-shadow: 0 0 20px var(--panel-glow);

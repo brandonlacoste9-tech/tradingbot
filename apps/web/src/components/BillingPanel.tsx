@@ -192,11 +192,11 @@ function BillingPanelBody({
         <div className="flex items-center gap-2">
           <a
             href="/plans"
-            className="font-mono text-[10px] text-accent hover:underline"
+            className="font-mono text-xs text-accent hover:underline"
           >
             Full page →
           </a>
-          <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 font-mono text-[10px] text-accent">
+          <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 font-mono text-xs text-accent">
             {loading ? "…" : plan.toUpperCase()}
           </span>
         </div>
@@ -238,7 +238,7 @@ function BillingPanelBody({
             Free
           </div>
           <div className="mt-0.5 text-sm font-semibold text-white">$0</div>
-          <div className="mt-1 text-[10px] leading-snug text-slate-400">
+          <div className="mt-1 text-xs leading-snug text-slate-400">
             {freeLimit}/day
           </div>
         </div>
@@ -255,7 +255,7 @@ function BillingPanelBody({
           <div className="mt-0.5 text-sm font-semibold text-white">
             ${proPrice}
           </div>
-          <div className="mt-1 text-[10px] leading-snug text-slate-400">
+          <div className="mt-1 text-xs leading-snug text-slate-400">
             {proLimit}/day
           </div>
         </div>
@@ -272,12 +272,12 @@ function BillingPanelBody({
           <div className="mt-0.5 text-sm font-semibold text-white">
             ${proPlusPrice}
           </div>
-          <div className="mt-1 text-[10px] leading-snug text-slate-400">
+          <div className="mt-1 text-xs leading-snug text-slate-400">
             {proPlusLimit}/day
           </div>
         </div>
       </div>
-      <p className="mb-3 text-[11px] text-mist">
+      <p className="mb-3 text-xs text-mist">
         CAD/mo · details on{" "}
         <a href="/plans" className="text-accent hover:underline">
           /plans
@@ -286,7 +286,7 @@ function BillingPanelBody({
 
       {pct != null && used != null && limit != null && (
         <div className="mb-3">
-          <div className="mb-1 flex justify-between text-[11px] text-slate-400">
+          <div className="mb-1 flex justify-between text-xs text-slate-400">
             <span>Daily chats</span>
             <span className="font-mono">
               {used}/{limit}
@@ -304,7 +304,7 @@ function BillingPanelBody({
         </div>
       )}
 
-      <p className="mb-3 text-[11px] leading-relaxed text-slate-500">
+      <p className="mb-3 text-xs leading-relaxed text-slate-500">
         Paper trading only — not investment advice. Promo codes accepted at
         Stripe Checkout.
       </p>
@@ -341,7 +341,7 @@ function BillingPanelBody({
           </button>
         )}
         {signedOut && (
-          <p className="text-[11px] text-mist">
+          <p className="text-xs text-mist">
             Use <strong className="text-slate-200">Sign in</strong> in the
             header, then return here to upgrade.
           </p>
@@ -358,7 +358,7 @@ function BillingPanelBody({
           </button>
         )}
         {!signedOut && status != null && !stripeReady && !devMode && (
-          <p className="text-[11px] text-warn">
+          <p className="text-xs text-warn">
             Stripe not ready on API — try again after deploy.
           </p>
         )}

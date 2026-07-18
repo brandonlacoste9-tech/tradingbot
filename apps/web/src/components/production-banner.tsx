@@ -10,7 +10,7 @@ export default function ProductionBanner() {
 
   return (
     <div
-      className="border-b border-warn/40 bg-warn/10 px-4 py-1.5 text-center font-mono text-[11px] text-warn"
+      className="border-b border-warn/40 bg-warn/10 px-4 py-1.5 text-center font-mono text-xs text-warn"
       role="status"
     >
       Clerk <strong className="font-semibold">development</strong> keys (

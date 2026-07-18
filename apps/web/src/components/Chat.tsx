@@ -221,7 +221,7 @@ function ChatBody({
             </p>
           </div>
           {busy && (
-            <span className="max-w-[14rem] rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-right font-mono text-[10px] text-accent">
+            <span className="max-w-[14rem] rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-right font-mono text-xs text-accent">
               {loadingHint}
             </span>
           )}
@@ -234,7 +234,7 @@ function ChatBody({
                 type="button"
                 disabled={busy}
                 onClick={() => void sendText(q)}
-                className="rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[11px] text-slate-300 transition hover:border-accent/50 hover:text-accent disabled:opacity-40"
+                className="rounded-full border border-line bg-ink/70 px-2.5 py-1 text-xs text-slate-300 transition hover:border-accent/50 hover:text-accent disabled:opacity-40"
               >
                 {q}
               </button>
@@ -274,7 +274,7 @@ function ChatBody({
             }`}
           >
             {(m.mode || m.model) && (
-              <div className="mb-1 font-mono text-[10px] uppercase tracking-wide text-slate-500">
+              <div className="mb-1 font-mono text-xs uppercase tracking-wide text-slate-500">
                 {m.mode}
                 {m.model ? ` · ${m.model}` : ""}
               </div>
@@ -292,7 +292,7 @@ function ChatBody({
                           ? JSON.stringify(t.result).slice(0, 400)
                           : t.error || t.tool
                       }
-                      className={`inline-flex max-w-full items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[10px] ${
+                      className={`inline-flex max-w-full items-center gap-1 rounded-lg border px-2 py-1 font-mono text-xs ${
                         t.ok
                           ? "border-good/30 bg-good/5 text-slate-300"
                           : "border-bad/30 bg-bad/5 text-bad"
