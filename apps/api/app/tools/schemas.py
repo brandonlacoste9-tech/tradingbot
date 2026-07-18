@@ -205,3 +205,18 @@ def as_anthropic_tools() -> list[dict[str, Any]]:
         }
         for t in TOOL_DEFINITIONS
     ]
+
+
+def as_openai_tools() -> list[dict[str, Any]]:
+    """Format for OpenAI / xAI Chat Completions tools= parameter."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["input_schema"],
+            },
+        }
+        for t in TOOL_DEFINITIONS
+    ]

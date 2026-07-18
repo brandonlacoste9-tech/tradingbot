@@ -2,7 +2,7 @@
 Agent loop.
 
 - Demo path: keyword intent extraction (no LLM key required).
-- Real path: Anthropic Messages API tool-calling using tools/schemas.py.
+- LLM path: Anthropic Messages API OR xAI/OpenAI-compatible Chat Completions.
 
 Hard rule: this module may CREATE proposals and HOLD journals.
 It never submits orders. Submission only happens after human confirm + policy re-check.
@@ -15,7 +15,7 @@ import re
 from decimal import Decimal
 from typing import Any, Awaitable, Callable
 
-from app.tools.schemas import as_anthropic_tools
+from app.tools.schemas import as_anthropic_tools, as_openai_tools
 
 
 SYSTEM_PROMPT = """You are a paper-trading research and execution assistant.
@@ -42,26 +42,158 @@ async def run_agent_turn_llm(
     user_message: str,
     tool_executor: ToolExecutor,
     *,
+    provider: str = "xai",
     api_key: str | None = None,
-    model: str = "claude-sonnet-4-20250514",
+    model: str | None = None,
+    base_url: str | None = None,
 ) -> dict[str, Any]:
     """
-    Real LLM path: Anthropic Messages API with tool use.
+    Real LLM path with tool use.
+
+    provider:
+      - xai / openai → OpenAI-compatible Chat Completions (default for cost)
+      - anthropic → Anthropic Messages API
 
     tool_executor(tool_name, args) must run the same path as /agent/chat demo tools
     (propose_order → policy gate only; never broker submit).
     """
+    provider = (provider or "xai").lower().strip()
+    if provider in ("xai", "openai", "grok"):
+        return await _run_openai_compatible(
+            user_message,
+            tool_executor,
+            provider=provider,
+            api_key=api_key,
+            model=model,
+            base_url=base_url,
+        )
+    if provider == "anthropic":
+        return await _run_anthropic(
+            user_message,
+            tool_executor,
+            api_key=api_key,
+            model=model,
+        )
+    raise RuntimeError(f"Unknown LLM_PROVIDER={provider!r}; use xai|openai|anthropic")
+
+
+async def _run_openai_compatible(
+    user_message: str,
+    tool_executor: ToolExecutor,
+    *,
+    provider: str,
+    api_key: str | None,
+    model: str | None,
+    base_url: str | None,
+) -> dict[str, Any]:
+    try:
+        from openai import AsyncOpenAI
+    except ImportError as e:
+        raise RuntimeError(
+            "openai package not installed. pip install openai "
+            "(used for xAI / OpenAI-compatible providers)"
+        ) from e
+
+    if not api_key:
+        raise RuntimeError(f"{provider.upper()} API key is not configured")
+
+    if provider in ("xai", "grok"):
+        resolved_base = (base_url or "https://api.x.ai/v1").rstrip("/")
+        # Fast/cheap default for agent tool loops; override with LLM_MODEL
+        resolved_model = model or "grok-4-1-fast-non-reasoning"
+    else:
+        resolved_base = (base_url or "https://api.openai.com/v1").rstrip("/")
+        resolved_model = model or "gpt-4o-mini"
+
+    client = AsyncOpenAI(api_key=api_key, base_url=resolved_base)
+    tools = as_openai_tools()
+    messages: list[dict[str, Any]] = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
+
+    collected_actions: list[dict[str, Any]] = []
+    collected_results: list[dict[str, Any]] = []
+    final_text_parts: list[str] = []
+
+    for _round in range(MAX_TOOL_ROUNDS):
+        resp = await client.chat.completions.create(
+            model=resolved_model,
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.2,
+        )
+        choice = resp.choices[0]
+        msg = choice.message
+        messages.append(msg.model_dump(exclude_none=True))
+
+        if msg.content:
+            final_text_parts.append(msg.content)
+
+        tool_calls = msg.tool_calls or []
+        if choice.finish_reason == "stop" or not tool_calls:
+            break
+
+        for tc in tool_calls:
+            name = tc.function.name
+            try:
+                args = json.loads(tc.function.arguments or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            if not isinstance(args, dict):
+                args = {}
+
+            collected_actions.append({"tool": name, "args": args})
+            try:
+                result = await tool_executor(name, args)
+                collected_results.append({"tool": name, "ok": True, "result": result})
+                result_payload = result
+            except Exception as e:  # noqa: BLE001
+                collected_results.append({"tool": name, "ok": False, "error": str(e)})
+                result_payload = {"error": str(e)}
+
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": _safe_json(result_payload),
+                }
+            )
+
+    assistant_text = "\n".join(final_text_parts).strip() or (
+        "Done. See tool results for details."
+    )
+
+    return {
+        "mode": "llm",
+        "assistant_text": assistant_text,
+        "actions": collected_actions,
+        "tool_results": collected_results,
+        "model": resolved_model,
+        "provider": provider,
+    }
+
+
+async def _run_anthropic(
+    user_message: str,
+    tool_executor: ToolExecutor,
+    *,
+    api_key: str | None,
+    model: str | None,
+) -> dict[str, Any]:
     try:
         import anthropic
     except ImportError as e:
         raise RuntimeError(
             "anthropic package not installed. pip install anthropic "
-            "(or use demo path without ANTHROPIC_API_KEY)"
+            "(or use xai/openai provider)"
         ) from e
 
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY is not configured")
 
+    resolved_model = model or "claude-sonnet-4-20250514"
     client = anthropic.AsyncAnthropic(api_key=api_key)
     tools = as_anthropic_tools()
     messages: list[dict[str, Any]] = [
@@ -74,14 +206,13 @@ async def run_agent_turn_llm(
 
     for _round in range(MAX_TOOL_ROUNDS):
         resp = await client.messages.create(
-            model=model,
+            model=resolved_model,
             max_tokens=2048,
             system=SYSTEM_PROMPT,
             tools=tools,
             messages=messages,
         )
 
-        # Collect assistant content blocks
         assistant_content = resp.content
         messages.append(
             {
@@ -107,7 +238,6 @@ async def run_agent_turn_llm(
         if resp.stop_reason == "end_turn" or not tool_uses:
             break
 
-        # Execute tools and feed results back
         tool_result_content: list[dict[str, Any]] = []
         for tu in tool_uses:
             name = tu.name
@@ -142,7 +272,8 @@ async def run_agent_turn_llm(
         "assistant_text": assistant_text,
         "actions": collected_actions,
         "tool_results": collected_results,
-        "model": model,
+        "model": resolved_model,
+        "provider": "anthropic",
     }
 
 
@@ -163,7 +294,7 @@ def _block_to_dict(block: Any) -> dict[str, Any]:
 
 def _safe_json(obj: Any) -> str:
     try:
-        return json.dumps(obj, default=str)[:12000]  # cap size for context
+        return json.dumps(obj, default=str)[:12000]
     except Exception:  # noqa: BLE001
         return json.dumps({"repr": str(obj)[:4000]})
 
@@ -176,7 +307,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
     text = user_message.strip()
     lower = text.lower()
 
-    # Hold / do nothing
     if any(
         k in lower
         for k in ("hold", "do nothing", "do not trade", "don't trade", "no trade")
@@ -193,7 +323,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             ],
         }
 
-    # Web research (primary AI job)
     if any(
         k in lower
         for k in (
@@ -206,7 +335,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             "headline",
         )
     ):
-        # Prefer free-text after keyword, else full message
         q = text
         for prefix in ("search for", "search", "research", "look up", "lookup"):
             if lower.startswith(prefix):
@@ -223,7 +351,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             ],
         }
 
-    # Buying power / account
     if any(k in lower for k in ("buying power", "account", "equity", "cash balance")):
         return {
             "mode": "demo",
@@ -231,7 +358,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             "actions": [{"tool": "get_account", "args": {}}],
         }
 
-    # Positions
     if "position" in lower:
         return {
             "mode": "demo",
@@ -239,7 +365,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             "actions": [{"tool": "get_positions", "args": {}}],
         }
 
-    # News (broker feed if any; prefer web_search for research)
     news_m = re.search(r"news\s+(?:on|for|about)?\s*([A-Za-z.]{1,8})", text, re.I)
     if "news" in lower:
         symbol = (news_m.group(1) if news_m else "SPY").upper().rstrip(".")
@@ -257,7 +382,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             ],
         }
 
-    # Propose order: "buy 1 share of SPY", "propose limit buy of 2 AAPL at 190"
     buy_m = re.search(
         r"(?:propose\s+)?(?:a\s+)?(?:limit\s+)?buy\s+(?:of\s+)?"
         r"(?:(\d+(?:\.\d+)?)\s+shares?\s+(?:of\s+)?)?"

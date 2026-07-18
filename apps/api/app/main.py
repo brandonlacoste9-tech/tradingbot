@@ -311,15 +311,32 @@ async def _execute_tool(tool: str, args: dict[str, Any], mem: MemoryStore) -> An
 # ---------- routes ----------
 
 
+def _llm_ready() -> tuple[bool, str, str | None]:
+    """Return (enabled, provider, api_key)."""
+    provider = (settings.llm_provider or "xai").lower().strip()
+    if provider in ("xai", "grok"):
+        key = settings.xai_api_key
+        return (bool(key), "xai", key or None)
+    if provider == "openai":
+        key = settings.openai_api_key
+        return (bool(key), "openai", key or None)
+    if provider == "anthropic":
+        key = settings.anthropic_api_key
+        return (bool(key), "anthropic", key or None)
+    return (False, provider, None)
+
+
 @app.get("/health")
 async def health():
     client = _client()
+    llm_on, provider, _ = _llm_ready()
     return {
         "ok": True,
         "paper_only": settings.paper_only,
         "confirm_ttl_seconds": _ttl(),
         "broker_backend": getattr(client, "backend_name", settings.broker_backend),
-        "llm_enabled": bool(settings.anthropic_api_key),
+        "llm_enabled": llm_on,
+        "llm_provider": provider if llm_on else "demo",
     }
 
 
@@ -353,7 +370,7 @@ async def validate_connection():
 async def agent_chat(body: ChatRequest):
     """
     Chat → agent plan → tools via _execute_tool (propose → policy only).
-    LLM path when ANTHROPIC_API_KEY set; otherwise keyword demo.
+    LLM when provider key set (xai/openai/anthropic); else keyword demo.
     Never submits orders here — confirm gate only.
     """
     store.audit_event("user", "chat_message", {"message": body.message})
@@ -362,18 +379,22 @@ async def agent_chat(body: ChatRequest):
         return await _execute_tool(name, args or {}, store)
 
     plan: dict[str, Any]
-    if settings.anthropic_api_key:
+    llm_on, provider, api_key = _llm_ready()
+    if llm_on and api_key:
         try:
             plan = await run_agent_turn_llm(
                 body.message,
                 _tool_exec,
-                api_key=settings.anthropic_api_key,
+                provider=provider,
+                api_key=api_key,
+                model=settings.llm_model or None,
+                base_url=settings.llm_base_url or None,
             )
         except Exception as e:  # noqa: BLE001
             store.audit_event(
                 "system",
                 "llm_fallback_demo",
-                {"error": str(e)},
+                {"error": str(e), "provider": provider},
             )
             plan = run_agent_turn_demo(body.message)
             plan["fallback_from_llm"] = True
@@ -424,7 +445,8 @@ async def agent_chat(body: ChatRequest):
         "proposal": proposal,
         "confirm_ttl_seconds": _ttl(),
         "model": plan.get("model"),
-        "llm_enabled": bool(settings.anthropic_api_key),
+        "provider": plan.get("provider"),
+        "llm_enabled": llm_on,
     }
 
 

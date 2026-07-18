@@ -27,7 +27,14 @@ class Settings(BaseSettings):
     ibkr_port: int = 4002
     ibkr_client_id: int = 1
 
+    # LLM: xai (default, cheaper) | openai | anthropic | demo (empty keys)
+    llm_provider: str = "xai"
+    llm_model: str = ""  # empty → provider default
+    xai_api_key: str = ""
+    openai_api_key: str = ""
     anthropic_api_key: str = ""
+    # Optional override base URL (OpenAI-compatible only)
+    llm_base_url: str = ""
 
     default_max_position_pct: float = 5.0
     default_max_daily_loss_pct: float = 3.0
