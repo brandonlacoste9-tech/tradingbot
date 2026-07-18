@@ -9,11 +9,46 @@ import type {
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/** Tenant id for AUTH_MODE=disabled. Overridden by Clerk JWT when enabled. */
+let demoUserId =
+  (typeof window !== "undefined" &&
+    window.localStorage.getItem("tradingbot_user_id")) ||
+  "demo";
+
+let authToken: string | null = null;
+
+export function setDemoUserId(id: string) {
+  demoUserId = id || "demo";
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem("tradingbot_user_id", demoUserId);
+  }
+}
+
+export function getDemoUserId() {
+  return demoUserId;
+}
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
+function authHeaders(): Record<string, string> {
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (authToken) {
+    h.Authorization = `Bearer ${authToken}`;
+  } else {
+    h["X-User-Id"] = demoUserId;
+  }
+  return h;
+}
+
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...authHeaders(),
       ...(init?.headers || {}),
     },
   });
@@ -32,6 +67,16 @@ async function req<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function health() {
   return req<HealthInfo>("/health");
+}
+
+export function me() {
+  return req<{
+    user_id: string;
+    clerk_id?: string | null;
+    email?: string | null;
+    auth_mode: string;
+    plan: string;
+  }>("/me");
 }
 
 export function validateConnection() {
@@ -63,7 +108,7 @@ export function rejectProposal(proposal_id: string, reason?: string) {
 }
 
 export function listJournal() {
-  return req<{ entries: JournalEntry[] }>("/journal");
+  return req<{ entries: JournalEntry[]; user_id?: string }>("/journal");
 }
 
 export function listProposals() {
@@ -76,5 +121,6 @@ export function portfolio() {
     positions: PositionRow[];
     source: string;
     error?: string;
+    user_id?: string;
   }>("/portfolio");
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Chat from "@/components/Chat";
+import UserBar from "@/components/UserBar";
 import {
   health,
   listJournal,
@@ -88,8 +89,11 @@ export default function HomePage() {
               AI Trading Desk
             </h1>
             <p className="text-xs text-slate-500">
-              Research → policy → confirm · paper-first
+              Research → policy → confirm · multi-user paper (PR1)
             </p>
+            <div className="mt-2">
+              <UserBar />
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <StatusPill

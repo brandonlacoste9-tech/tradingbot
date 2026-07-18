@@ -64,6 +64,9 @@ export interface HealthInfo {
   broker_backend?: string;
   llm_enabled?: boolean;
   llm_provider?: string;
+  auth_mode?: string;
+  sim_tenants?: number;
+  tenancy?: { tenant_count: number; backend: string };
 }
 
 export interface ConnectionInfo {

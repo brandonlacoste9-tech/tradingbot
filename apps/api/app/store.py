@@ -47,6 +47,8 @@ class MemoryStore:
         self.journals: list[dict[str, Any]] = []
         self.audit: list[dict[str, Any]] = []
         self.connection: dict[str, Any] | None = None
+        self.profile: dict[str, Any] | None = None
+        # Per-tenant paper sim can be attached later (PR2)
 
     def audit_event(self, actor: str, action: str, details: dict[str, Any] | None = None) -> None:
         with self._lock:

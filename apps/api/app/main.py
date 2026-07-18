@@ -1,8 +1,9 @@
 """
-FastAPI app — demo chat → proposal → policy → confirm → broker paper.
+FastAPI app — multi-user paper desk (PR1 tenancy).
 
 LLM never submits orders. Confirm gate + TTL + policy re-check are mandatory.
-Default broker: PaperSim (Canada-safe). Optional: ibkr | alpaca via BROKER_BACKEND.
+Default broker: per-user PaperSim. Optional: ibkr | alpaca via BROKER_BACKEND.
+Auth: AUTH_MODE=disabled (X-User-Id) or clerk (Bearer JWT).
 """
 
 from __future__ import annotations
@@ -10,14 +11,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from app.agent.loop import run_agent_turn_demo, run_agent_turn_llm
+from app.auth import CurrentUser, get_current_user
 from app.brokers import BrokerError, get_broker
+from app.brokers.factory import sim_tenant_count
 from app.config import get_settings
 from app.policy.engine import (
     PolicyContext,
@@ -26,13 +29,14 @@ from app.policy.engine import (
     evaluate_proposal,
     is_proposal_expired,
 )
-from app.store import MemoryStore, TradeProposal, new_id, store
+from app.store import MemoryStore, TradeProposal, new_id
+from app.tenancy import get_tenant_store
 from app.tools.web_search import web_search
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 paper-trading agent orchestration (policy + confirm gate)",
-    version="0.2.0",
+    description="L2 multi-user paper desk (policy + confirm + tenancy)",
+    version="0.3.0",
 )
 
 settings = get_settings()
@@ -81,8 +85,14 @@ def _risk_limits() -> RiskLimits:
     )
 
 
-def _client():
-    return get_broker()
+def _client(user_id: str):
+    return get_broker(user_id=user_id)
+
+
+def _mem(user: CurrentUser) -> MemoryStore:
+    ts = get_tenant_store()
+    ts.ensure_user_record(user.id, email=user.email)
+    return ts.for_user(user.id)
 
 
 async def _build_policy_context(client, symbol: str) -> PolicyContext:
@@ -121,8 +131,9 @@ async def _latest_price(client, symbol: str) -> Decimal | None:
 async def _create_proposal_from_args(
     args: dict[str, Any],
     mem: MemoryStore,
+    user_id: str,
 ) -> dict[str, Any]:
-    client = _client()
+    client = _client(user_id)
     symbol = str(args["symbol"]).upper()
     side = args["side"]
     qty = Decimal(str(args["qty"]))
@@ -236,9 +247,11 @@ async def _create_proposal_from_args(
     return proposal.to_dict()
 
 
-async def _execute_tool(tool: str, args: dict[str, Any], mem: MemoryStore) -> Any:
-    client = _client()
-    mem.audit_event("agent", f"tool:{tool}", {"args": args})
+async def _execute_tool(
+    tool: str, args: dict[str, Any], mem: MemoryStore, user_id: str
+) -> Any:
+    client = _client(user_id)
+    mem.audit_event("agent", f"tool:{tool}", {"args": args, "user_id": user_id})
 
     if tool == "get_account":
         return await client.get_account()
@@ -283,7 +296,7 @@ async def _execute_tool(tool: str, args: dict[str, Any], mem: MemoryStore) -> An
         }
 
     if tool == "propose_order":
-        return await _create_proposal_from_args(args, mem)
+        return await _create_proposal_from_args(args, mem, user_id)
 
     if tool == "decide_hold":
         reason = args.get("reason") or "Hold / do nothing"
@@ -328,7 +341,7 @@ def _llm_ready() -> tuple[bool, str, str | None]:
 
 @app.get("/health")
 async def health():
-    client = _client()
+    client = _client("health")
     llm_on, provider, _ = _llm_ready()
     return {
         "ok": True,
@@ -337,16 +350,32 @@ async def health():
         "broker_backend": getattr(client, "backend_name", settings.broker_backend),
         "llm_enabled": llm_on,
         "llm_provider": provider if llm_on else "demo",
+        "auth_mode": settings.auth_mode,
+        "tenancy": get_tenant_store().stats(),
+        "sim_tenants": sim_tenant_count(),
+    }
+
+
+@app.get("/me")
+async def me(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    profile = get_tenant_store().ensure_user_record(user.id, email=user.email)
+    return {
+        "user_id": user.id,
+        "clerk_id": user.clerk_id,
+        "email": user.email or profile.get("email"),
+        "auth_mode": user.auth_mode,
+        "plan": profile.get("plan", "free"),
     }
 
 
 @app.get("/broker/status")
-async def broker_status():
+async def broker_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
     """Diagnostics for sim/ibkr/alpaca — no orders placed."""
-    client = _client()
+    client = _client(user.id)
     base = {
         "broker_backend": getattr(client, "backend_name", settings.broker_backend),
         "paper_only": settings.paper_only,
+        "user_id": user.id,
     }
     if hasattr(client, "status_report"):
         try:
@@ -354,7 +383,6 @@ async def broker_status():
             return {**base, **detail}
         except Exception as e:  # noqa: BLE001
             return {**base, "error": str(e)}
-    # sim / alpaca fallback
     try:
         v = await client.validate_connection()
         return {**base, "connected": True, **v}
@@ -363,17 +391,18 @@ async def broker_status():
 
 
 @app.post("/connection/validate")
-async def validate_connection():
+async def validate_connection(user: Annotated[CurrentUser, Depends(get_current_user)]):
     """Validate broker connection; record last_validated + is_paper."""
-    client = _client()
+    mem = _mem(user)
+    client = _client(user.id)
     try:
         result = await client.validate_connection()
     except BrokerError as e:
-        store.audit_event("user", "validate_connection_failed", {"error": str(e)})
+        mem.audit_event("user", "validate_connection_failed", {"error": str(e)})
         raise HTTPException(400, str(e)) from e
 
     if settings.paper_only and not result.get("is_paper", True):
-        store.audit_event(
+        mem.audit_event(
             "system",
             "reject_live_connection",
             {"backend": result.get("backend")},
@@ -383,22 +412,29 @@ async def validate_connection():
             "PAPER_ONLY is enabled; use BROKER_BACKEND=sim or IBKR/Alpaca paper.",
         )
 
-    store.connection = result
-    store.audit_event("user", "validate_connection", result)
-    return result
+    mem.connection = result
+    mem.audit_event("user", "validate_connection", result)
+    return {**result, "user_id": user.id}
 
 
 @app.post("/agent/chat")
-async def agent_chat(body: ChatRequest):
+async def agent_chat(
+    body: ChatRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
     """
     Chat → agent plan → tools via _execute_tool (propose → policy only).
-    LLM when provider key set (xai/openai/anthropic); else keyword demo.
-    Never submits orders here — confirm gate only.
+    Scoped to authenticated user. Never submits orders here.
     """
-    store.audit_event("user", "chat_message", {"message": body.message})
+    mem = _mem(user)
+    mem.audit_event(
+        "user",
+        "chat_message",
+        {"message": body.message, "user_id": user.id},
+    )
 
     async def _tool_exec(name: str, args: dict[str, Any]) -> Any:
-        return await _execute_tool(name, args or {}, store)
+        return await _execute_tool(name, args or {}, mem, user.id)
 
     plan: dict[str, Any]
     llm_on, provider, api_key = _llm_ready()
@@ -413,7 +449,7 @@ async def agent_chat(body: ChatRequest):
                 base_url=settings.llm_base_url or None,
             )
         except Exception as e:  # noqa: BLE001
-            store.audit_event(
+            mem.audit_event(
                 "system",
                 "llm_fallback_demo",
                 {"error": str(e), "provider": provider},
@@ -427,7 +463,6 @@ async def agent_chat(body: ChatRequest):
     tool_results: list[dict[str, Any]] = []
     proposal: dict[str, Any] | None = None
 
-    # LLM path already executed tools via _tool_exec; reuse results.
     if plan.get("mode") == "llm" and isinstance(plan.get("tool_results"), list):
         tool_results = plan["tool_results"]
         for tr in tool_results:
@@ -442,7 +477,7 @@ async def agent_chat(body: ChatRequest):
             tool = action["tool"]
             args = action.get("args") or {}
             try:
-                result = await _execute_tool(tool, args, store)
+                result = await _execute_tool(tool, args, mem, user.id)
                 tool_results.append({"tool": tool, "ok": True, "result": result})
                 if tool == "propose_order" and isinstance(result, dict):
                     proposal = result
@@ -469,36 +504,41 @@ async def agent_chat(body: ChatRequest):
         "model": plan.get("model"),
         "provider": plan.get("provider"),
         "llm_enabled": llm_on,
+        "user_id": user.id,
     }
 
 
 @app.get("/proposals")
-async def list_proposals():
-    return {"proposals": store.list_proposals()}
+async def list_proposals(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    return {"proposals": _mem(user).list_proposals(), "user_id": user.id}
 
 
 @app.get("/proposals/{proposal_id}")
-async def get_proposal(proposal_id: str):
-    p = store.get_proposal(proposal_id)
+async def get_proposal(
+    proposal_id: str,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    mem = _mem(user)
+    p = mem.get_proposal(proposal_id)
     if not p:
         raise HTTPException(404, "Proposal not found")
-    # Expire lazily
     if p.policy_status == "awaiting_confirm" and p.expires_at:
         exp = datetime.fromisoformat(p.expires_at)
         if is_proposal_expired(exp):
             p.policy_status = "expired"
-            store.update_proposal(p)
-            store.audit_event("system", "proposal_expired", {"proposal_id": p.id})
+            mem.update_proposal(p)
+            mem.audit_event("system", "proposal_expired", {"proposal_id": p.id})
     return p.to_dict()
 
 
 @app.post("/proposals/confirm")
-async def confirm_proposal(body: ConfirmRequest):
-    """
-    Human confirm gate. Re-check status + TTL, then submit to paper broker
-    with the stored client_order_id (idempotency).
-    """
-    p = store.get_proposal(body.proposal_id)
+async def confirm_proposal(
+    body: ConfirmRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """Human confirm gate — tenant-scoped."""
+    mem = _mem(user)
+    p = mem.get_proposal(body.proposal_id)
     if not p:
         raise HTTPException(404, "Proposal not found")
 
@@ -506,8 +546,8 @@ async def confirm_proposal(body: ConfirmRequest):
         exp = datetime.fromisoformat(p.expires_at)
         if is_proposal_expired(exp):
             p.policy_status = "expired"
-            store.update_proposal(p)
-            store.audit_event(
+            mem.update_proposal(p)
+            mem.audit_event(
                 "system",
                 "confirm_rejected_expired",
                 {"proposal_id": p.id},
@@ -520,8 +560,7 @@ async def confirm_proposal(body: ConfirmRequest):
             f"Proposal not confirmable (status={p.policy_status})",
         )
 
-    # Re-run policy quickly (sanity)
-    client = _client()
+    client = _client(user.id)
     intent = TradeIntent(
         symbol=p.symbol,
         side=p.side,  # type: ignore[arg-type]
@@ -551,12 +590,12 @@ async def confirm_proposal(body: ConfirmRequest):
     if not decision.allowed:
         p.policy_status = "policy_rejected"
         p.rejection_reason = decision.rejection_reason
-        store.update_proposal(p)
+        mem.update_proposal(p)
         raise HTTPException(400, f"Policy re-check failed: {decision.rejection_reason}")
 
     p.policy_status = "confirmed"
-    store.update_proposal(p)
-    store.audit_event("user", "proposal_confirmed", {"proposal_id": p.id})
+    mem.update_proposal(p)
+    mem.audit_event("user", "proposal_confirmed", {"proposal_id": p.id})
 
     try:
         broker_resp = await client.submit_order(
@@ -568,7 +607,7 @@ async def confirm_proposal(body: ConfirmRequest):
             client_order_id=p.client_order_id,
         )
     except BrokerError as e:
-        store.audit_event(
+        mem.audit_event(
             "broker",
             "submit_failed",
             {
@@ -581,7 +620,7 @@ async def confirm_proposal(body: ConfirmRequest):
 
     p.policy_status = "submitted"
     p.broker_order_id = broker_resp.get("id")
-    store.update_proposal(p)
+    mem.update_proposal(p)
 
     order_row = {
         "id": new_id(),
@@ -592,15 +631,15 @@ async def confirm_proposal(body: ConfirmRequest):
         "raw_response": broker_resp,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    store.add_order(order_row)
-    store.add_journal(
+    mem.add_order(order_row)
+    mem.add_journal(
         summary_md=(
             f"**Submitted** {p.side} {p.qty} {p.symbol} "
             f"(client_order_id={p.client_order_id}, broker={p.broker_order_id})"
         ),
         decisions=[{"type": "submitted", "proposal_id": p.id, "order": order_row}],
     )
-    store.audit_event(
+    mem.audit_event(
         "broker",
         "order_submitted",
         {
@@ -614,12 +653,17 @@ async def confirm_proposal(body: ConfirmRequest):
         "proposal": p.to_dict(),
         "order": order_row,
         "broker": broker_resp,
+        "user_id": user.id,
     }
 
 
 @app.post("/proposals/reject")
-async def reject_proposal(body: RejectRequest):
-    p = store.get_proposal(body.proposal_id)
+async def reject_proposal(
+    body: RejectRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    mem = _mem(user)
+    p = mem.get_proposal(body.proposal_id)
     if not p:
         raise HTTPException(404, "Proposal not found")
     if p.policy_status not in ("awaiting_confirm", "proposed"):
@@ -627,12 +671,12 @@ async def reject_proposal(body: RejectRequest):
 
     p.policy_status = "cancelled"
     p.rejection_reason = body.reason or "Rejected by user"
-    store.update_proposal(p)
-    store.add_journal(
+    mem.update_proposal(p)
+    mem.add_journal(
         summary_md=f"**User rejected** proposal {p.symbol}: {p.rejection_reason}",
         decisions=[{"type": "user_rejected", "proposal_id": p.id}],
     )
-    store.audit_event(
+    mem.audit_event(
         "user",
         "proposal_rejected",
         {"proposal_id": p.id, "reason": p.rejection_reason},
@@ -641,23 +685,29 @@ async def reject_proposal(body: RejectRequest):
 
 
 @app.get("/journal")
-async def get_journal():
-    return {"entries": store.journals}
+async def get_journal(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    return {"entries": _mem(user).journals, "user_id": user.id}
 
 
 @app.get("/audit")
-async def get_audit(limit: int = 100):
-    return {"events": store.audit[: max(1, min(limit, 500))]}
+async def get_audit(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    limit: int = 100,
+):
+    return {
+        "events": _mem(user).audit[: max(1, min(limit, 500))],
+        "user_id": user.id,
+    }
 
 
 @app.get("/orders")
-async def get_orders():
-    return {"orders": store.orders}
+async def get_orders(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    return {"orders": _mem(user).orders, "user_id": user.id}
 
 
 @app.get("/portfolio")
-async def portfolio():
-    client = _client()
+async def portfolio(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    client = _client(user.id)
     try:
         account = await client.get_account()
         positions = await client.get_positions()
@@ -665,6 +715,7 @@ async def portfolio():
             "account": account,
             "positions": positions,
             "source": getattr(client, "backend_name", "broker"),
+            "user_id": user.id,
         }
     except BrokerError as e:
         return {
@@ -672,4 +723,5 @@ async def portfolio():
             "positions": [],
             "source": "unavailable",
             "error": str(e),
+            "user_id": user.id,
         }

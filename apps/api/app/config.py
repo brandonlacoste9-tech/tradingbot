@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://trading:trading@localhost:5432/ai_trading"
     confirm_ttl_seconds: int = 180
 
+    # Auth: disabled (demo multi-tenant via X-User-Id) | clerk
+    auth_mode: str = "disabled"
+    demo_user_id: str = "demo"
+    clerk_issuer: str = ""
+    clerk_jwks_url: str = ""
+    clerk_audience: str = ""
+    # Optional: publishable key only needed on frontend
+
     # sim = Canada-safe in-memory paper (default for Render)
     # ibkr = local IB Gateway paper (port 4002)
     # alpaca = US-eligible accounts only (not for Canadian residents)
