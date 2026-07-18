@@ -13,3 +13,6 @@ dist
 *.log
 .DS_Store
 apps/web/.env.local
+
+# Local Netlify folder
+.netlify
