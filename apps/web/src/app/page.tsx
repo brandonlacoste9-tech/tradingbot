@@ -158,7 +158,10 @@ function HomePageBody({
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-mist">
                 Chat with Grok → it may propose a trade →{" "}
                 <strong className="font-medium text-slate-300">you confirm</strong>{" "}
-                → paper fill only. No live brokerage.
+                → paper fill only. No live brokerage.{" "}
+                <a href="/trade" className="font-medium text-good underline-offset-2 hover:underline">
+                  Open paper trading floor →
+                </a>
               </p>
               <div className="mt-3">
                 <UserBar />

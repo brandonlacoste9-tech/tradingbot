@@ -183,6 +183,52 @@ export function listProposals() {
   return req<{ proposals: TradeProposal[] }>("/proposals");
 }
 
+export function createProposal(body: {
+  symbol: string;
+  side: "buy" | "sell";
+  qty: string | number;
+  order_type?: "limit" | "market";
+  limit_price?: string | number | null;
+  reason?: string;
+}) {
+  return req<{
+    proposal: TradeProposal;
+    confirm_ttl_seconds: number;
+    user_id: string;
+    note?: string;
+  }>("/proposals/create", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function marketQuote(symbol: string) {
+  return req<{
+    symbol: string;
+    price: string;
+    source: string;
+    paper: boolean;
+  }>(`/market/quote?symbol=${encodeURIComponent(symbol)}`);
+}
+
+export function marketQuotes(symbols: string[]) {
+  const q = symbols.map((s) => s.trim().toUpperCase()).filter(Boolean).join(",");
+  return req<{
+    quotes: {
+      symbol: string;
+      price: string | null;
+      source: string | null;
+      ok: boolean;
+      error?: string;
+    }[];
+    paper: boolean;
+  }>(`/market/quotes?symbols=${encodeURIComponent(q)}`);
+}
+
+export function listOrders() {
+  return req<{ orders: Record<string, unknown>[]; user_id?: string }>("/orders");
+}
+
 export function portfolio() {
   return req<{
     account: Record<string, string> | null;

@@ -148,6 +148,21 @@ class RejectRequest(BaseModel):
     reason: str | None = None
 
 
+class CreateProposalRequest(BaseModel):
+    """Manual paper ticket from /trade UI — same policy path as agent propose_order."""
+
+    symbol: str = Field(min_length=1, max_length=16)
+    side: str = Field(description="buy | sell")
+    qty: str | float | int = Field(description="share quantity")
+    order_type: str = "limit"
+    limit_price: str | float | None = None
+    reason: str = Field(
+        default="Manual paper ticket from trading desk",
+        min_length=1,
+        max_length=2000,
+    )
+
+
 class CheckoutRequest(BaseModel):
     success_url: str | None = None
     cancel_url: str | None = None
@@ -797,6 +812,106 @@ async def market_data_status(user: Annotated[CurrentUser, Depends(get_current_us
         return {"ok": False, **base, "error": str(e)}
 
 
+@app.get("/market/quote")
+async def market_quote(
+    symbol: str,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """
+    Quote for trading desk watchlist / ticket.
+    Prefers live market data; falls back to PaperSim mark.
+    Updates sim mark when a live price is available (paper book stays in sync).
+    """
+    sym = (symbol or "").strip().upper()
+    if not sym or len(sym) > 16:
+        raise HTTPException(400, "Invalid symbol")
+
+    client = await _client_async(user.id)
+    source = "sim"
+    price: Decimal | None = None
+    raw: dict[str, Any] = {}
+
+    if any_md_configured():
+        try:
+            q = await md_get_quote(sym)
+            raw = q if isinstance(q, dict) else {"raw": q}
+            px = raw.get("close") or raw.get("price") or raw.get("p")
+            if px is not None:
+                price = Decimal(str(px))
+                source = str(raw.get("provider") or raw.get("source") or "marketdata")
+                if hasattr(client, "set_mark"):
+                    try:
+                        client.set_mark(sym, price)
+                    except Exception:  # noqa: BLE001
+                        pass
+        except Exception as e:  # noqa: BLE001
+            raw = {"market_data_error": str(e)}
+
+    if price is None:
+        try:
+            trade = await client.get_latest_trade(sym)
+            t = trade.get("trade") or trade
+            if isinstance(t, dict):
+                if t.get("p") is not None:
+                    price = Decimal(str(t["p"]))
+                elif t.get("price") is not None:
+                    price = Decimal(str(t["price"]))
+            if price is None and trade.get("price") is not None:
+                price = Decimal(str(trade["price"]))
+            source = getattr(client, "backend_name", "broker")
+            raw = {**raw, "broker_trade": trade}
+        except BrokerError as e:
+            raise HTTPException(502, f"Quote unavailable: {e}") from e
+
+    if price is None:
+        raise HTTPException(404, f"No quote for {sym}")
+
+    return {
+        "symbol": sym,
+        "price": str(price.quantize(Decimal("0.01"))),
+        "source": source,
+        "paper": True,
+        "user_id": user.id,
+        "raw": raw if settings.public_health_verbose else None,
+    }
+
+
+@app.get("/market/quotes")
+async def market_quotes(
+    symbols: str,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """Batch quotes for watchlist (comma-separated symbols, max 12)."""
+    parts = [p.strip().upper() for p in (symbols or "").split(",") if p.strip()]
+    parts = parts[:12]
+    if not parts:
+        raise HTTPException(400, "symbols required")
+    out: list[dict[str, Any]] = []
+    for sym in parts:
+        try:
+            # Reuse single-quote logic without nested FastAPI call
+            one = await market_quote(sym, user)
+            out.append(
+                {
+                    "symbol": one["symbol"],
+                    "price": one["price"],
+                    "source": one["source"],
+                    "ok": True,
+                }
+            )
+        except HTTPException as e:
+            out.append(
+                {
+                    "symbol": sym,
+                    "price": None,
+                    "source": None,
+                    "ok": False,
+                    "error": e.detail,
+                }
+            )
+    return {"quotes": out, "user_id": user.id, "paper": True}
+
+
 @app.get("/plaid/status")
 async def plaid_status_route(user: Annotated[CurrentUser, Depends(get_current_user)]):
     """Plaid bank-link readiness (not market data)."""
@@ -1008,6 +1123,66 @@ async def agent_chat(
             "remaining": usage.get("remaining"),
             "plan": usage["plan"],
         },
+    }
+
+
+@app.post("/proposals/create")
+async def create_proposal(
+    body: CreateProposalRequest,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """
+    Manual paper ticket (trading desk UI).
+    Creates a proposal via the same policy engine as the agent — never submits.
+    User must still POST /proposals/confirm within TTL.
+    """
+    blocked, block_reason = is_trading_blocked(user.id)
+    if blocked:
+        raise HTTPException(503, f"Trading paused: {block_reason}")
+
+    side = (body.side or "").lower().strip()
+    if side not in ("buy", "sell"):
+        raise HTTPException(400, "side must be buy or sell")
+    order_type = (body.order_type or "limit").lower().strip()
+    if order_type not in ("limit", "market"):
+        raise HTTPException(400, "order_type must be limit or market")
+
+    mem = await _mem(user)
+    try:
+        qty = Decimal(str(body.qty))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, f"Invalid qty: {e}") from e
+    if qty <= 0:
+        raise HTTPException(400, "qty must be positive")
+
+    args: dict[str, Any] = {
+        "symbol": body.symbol.strip().upper(),
+        "side": side,
+        "qty": str(qty),
+        "order_type": order_type,
+        "reason": (body.reason or "").strip()
+        or "Manual paper ticket from trading desk",
+    }
+    if body.limit_price is not None and str(body.limit_price).strip() != "":
+        args["limit_price"] = str(body.limit_price)
+
+    proposal = await _create_proposal_from_args(args, mem, user.id)
+    mem.audit_event(
+        "user",
+        "manual_ticket",
+        {"proposal_id": proposal.get("id"), "symbol": args["symbol"], "side": side},
+    )
+    await get_tenant_store().persist_audit(
+        user.id,
+        "user",
+        "manual_ticket",
+        {"proposal_id": proposal.get("id"), "symbol": args["symbol"]},
+    )
+    return {
+        "proposal": proposal,
+        "confirm_ttl_seconds": _ttl(),
+        "user_id": user.id,
+        "note": "Paper only — confirm to fill against PaperSim. Not a live brokerage order.",
     }
 
 

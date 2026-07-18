@@ -232,6 +232,21 @@ body {
   opacity: 0.4;
 }
 
+.hud-input {
+  border: 1px solid var(--panel-border);
+  background: var(--stat-bg);
+  color: var(--fg);
+  outline: none;
+}
+.hud-input::placeholder {
+  color: var(--fg-muted);
+  opacity: 0.7;
+}
+.hud-input:focus {
+  border-color: color-mix(in srgb, rgb(var(--c-accent)) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--panel-glow);
+}
+
 .bridge-title {
   background-image: var(--title-grad);
   -webkit-background-clip: text;

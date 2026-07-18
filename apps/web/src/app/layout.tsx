@@ -64,11 +64,17 @@ function AuthChrome() {
             href="/"
             className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
           >
-            Desk
+            AI Desk
+          </a>
+          <a
+            href="/trade"
+            className="rounded-full border border-good/40 bg-good/10 px-2.5 py-1.5 text-xs font-semibold text-good transition hover:bg-good/20 sm:px-3 sm:text-sm"
+          >
+            Trade
           </a>
           <a
             href="/plans"
-            className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/20 sm:px-3 sm:text-sm"
+            className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
           >
             Plans
           </a>
