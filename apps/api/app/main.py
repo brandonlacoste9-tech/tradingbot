@@ -612,12 +612,14 @@ async def billing_status(user: Annotated[CurrentUser, Depends(get_current_user)]
     usage = await get_usage_snapshot(user.id, plan)
     blocked, block_reason = is_chat_blocked(user.id)
     breaker = get_llm_breaker().snapshot()
+    s = get_settings()
     return {
         "user_id": user.id,
         "plan": plan,
         "limits": PLAN_LIMITS.get(plan, PLAN_LIMITS["free"]),
         "usage": usage,
         "stripe_configured": stripe_configured(),
+        "stripe_dev_mode": bool(s.stripe_dev_mode),
         "stripe_customer_id": profile.get("stripe_customer_id"),
         "subscription_status": profile.get("subscription_status"),
         "plans": PLAN_LIMITS,
