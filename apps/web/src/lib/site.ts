@@ -33,6 +33,11 @@ export const SEO_KEYWORDS = [
   "AI stock research desk",
 ];
 
-/** Google Search Console HTML meta (optional env override). */
+/**
+ * Google Search Console HTML meta verification (public by design).
+ * Content value only — not the "google-site-verification=" prefix.
+ * Override with GOOGLE_SITE_VERIFICATION env if you rotate the property.
+ */
 export const GOOGLE_SITE_VERIFICATION =
-  process.env.GOOGLE_SITE_VERIFICATION?.trim() || "";
+  process.env.GOOGLE_SITE_VERIFICATION?.trim() ||
+  "0yPwOioMKL-oZJEJdUwjUJLqfDO6qKvDKjsQ_o7PPao";
