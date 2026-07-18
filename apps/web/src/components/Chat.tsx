@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { SignInButton, useAuth } from "@clerk/nextjs";
+import { useCallback, useEffect, useState } from "react";
 import { chat, getApiBase, health } from "@/lib/api";
 import type { ChatResponse, TradeProposal } from "@/lib/types";
 import PreflightModal from "./PreflightModal";
@@ -22,6 +23,17 @@ const QUICK = [
   "Propose a limit buy of 1 share of SPY with a short thesis",
   "Hold — no edge today",
 ];
+
+const LOADING_STEPS = [
+  "Waking the API…",
+  "Talking to Grok…",
+  "Fetching market data…",
+  "Still working (first reply can take ~20s)…",
+];
+
+const clerkEnabled = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+);
 
 function toolSummary(tool: string, result: unknown): string {
   if (result == null || typeof result !== "object") {
@@ -60,37 +72,87 @@ function toolSummary(tool: string, result: unknown): string {
   return "";
 }
 
-export default function Chat({
-  onProposalSubmitted,
-  onActivity,
-}: {
+export default function Chat(props: {
   onProposalSubmitted?: () => void;
   onActivity?: () => void;
 }) {
+  if (clerkEnabled) {
+    return <ChatClerk {...props} />;
+  }
+  return <ChatBody isLoaded isSignedIn {...props} />;
+}
+
+function ChatClerk(props: {
+  onProposalSubmitted?: () => void;
+  onActivity?: () => void;
+}) {
+  const { isLoaded, isSignedIn } = useAuth();
+  return (
+    <ChatBody
+      isLoaded={isLoaded}
+      isSignedIn={Boolean(isSignedIn)}
+      {...props}
+    />
+  );
+}
+
+function ChatBody({
+  isLoaded,
+  isSignedIn,
+  onProposalSubmitted,
+  onActivity,
+}: {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  onProposalSubmitted?: () => void;
+  onActivity?: () => void;
+}) {
+  const locked = clerkEnabled && isLoaded && !isSignedIn;
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: "welcome",
       role: "system",
       text:
-        "Desk online. Quick actions below, or type freely. " +
-        "Orders never leave the paper book until you confirm preflight.",
+        "Chat with Grok to research symbols. If it proposes a trade, you confirm it — paper only.",
     },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loadingHint, setLoadingHint] = useState(LOADING_STEPS[0]);
   const [proposal, setProposal] = useState<TradeProposal | null>(null);
+
+  useEffect(() => {
+    if (!busy) return;
+    let i = 0;
+    setLoadingHint(LOADING_STEPS[0]);
+    const id = window.setInterval(() => {
+      i = Math.min(i + 1, LOADING_STEPS.length - 1);
+      setLoadingHint(LOADING_STEPS[i]);
+    }, 4500);
+    return () => window.clearInterval(id);
+  }, [busy]);
 
   const sendText = useCallback(
     async (textRaw: string) => {
       const text = textRaw.trim();
       if (!text || busy) return;
+      if (locked) {
+        setMessages((m) => [
+          ...m,
+          {
+            id: crypto.randomUUID(),
+            role: "system",
+            text: "Sign in (top right) to use the desk.",
+          },
+        ]);
+        return;
+      }
       setInput("");
       setBusy(true);
       const userMsg: Msg = { id: crypto.randomUUID(), role: "user", text };
       setMessages((m) => [...m, userMsg]);
 
       try {
-        // Wake cold Render instance before the long LLM call
         try {
           await health();
         } catch {
@@ -129,10 +191,9 @@ export default function Chat({
         }
       } catch (e) {
         const raw = e instanceof Error ? e.message : "Chat failed";
-        const hint =
-          /sign in|401|bearer|token/i.test(raw)
-            ? raw
-            : `${raw} (API: ${getApiBase()})`;
+        const hint = /sign in|401|bearer|token/i.test(raw)
+          ? raw
+          : `${raw} (API: ${getApiBase()})`;
         setMessages((m) => [
           ...m,
           {
@@ -145,7 +206,7 @@ export default function Chat({
         setBusy(false);
       }
     },
-    [busy, onActivity]
+    [busy, locked, onActivity]
   );
 
   return (
@@ -153,34 +214,54 @@ export default function Chat({
       <div className="border-b border-line/80 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <div className="hud-label">Comms</div>
-            <h2 className="text-base font-semibold text-white">Agent channel</h2>
+            <div className="hud-label">Chat</div>
+            <h2 className="text-base font-semibold text-white">Research desk</h2>
             <p className="text-xs text-mist">
-              Research · propose · confirm · paper only
+              Ask for a quote, research, or a paper proposal
             </p>
           </div>
           {busy && (
-            <span className="animate-pulse rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 font-mono text-[10px] text-accent">
-              SCANNING…
+            <span className="max-w-[14rem] rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-right font-mono text-[10px] text-accent">
+              {loadingHint}
             </span>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {QUICK.map((q) => (
-            <button
-              key={q}
-              type="button"
-              disabled={busy}
-              onClick={() => void sendText(q)}
-              className="rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[11px] text-slate-300 transition hover:border-accent/50 hover:text-accent disabled:opacity-40"
-            >
-              {q}
-            </button>
-          ))}
-        </div>
+        {!locked && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {QUICK.map((q) => (
+              <button
+                key={q}
+                type="button"
+                disabled={busy}
+                onClick={() => void sendText(q)}
+                className="rounded-full border border-line bg-ink/70 px-2.5 py-1 text-[11px] text-slate-300 transition hover:border-accent/50 hover:text-accent disabled:opacity-40"
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        {locked && (
+          <div className="rounded-xl border border-accent/30 bg-accent/5 px-4 py-6 text-center">
+            <p className="text-sm font-medium text-white">
+              Sign in to open the desk
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-mist">
+              Your paper book, chat, and proposals need a free account. No real
+              money.
+            </p>
+            <div className="mt-4">
+              <SignInButton mode="modal">
+                <button type="button" className="hud-btn-primary">
+                  Sign in
+                </button>
+              </SignInButton>
+            </div>
+          </div>
+        )}
         {messages.map((m) => (
           <div
             key={m.id}
@@ -234,10 +315,13 @@ export default function Chat({
           </div>
         ))}
         {busy && (
-          <div className="flex gap-1.5 px-1">
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-500 [animation-delay:0ms]" />
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-500 [animation-delay:150ms]" />
-            <span className="h-2 w-2 animate-bounce rounded-full bg-slate-500 [animation-delay:300ms]" />
+          <div className="rounded-xl border border-line/60 bg-ink/50 px-3 py-2 text-xs text-mist">
+            <div className="mb-1.5 flex gap-1.5">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-accent [animation-delay:0ms]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-accent [animation-delay:150ms]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-accent [animation-delay:300ms]" />
+            </div>
+            {loadingHint}
           </div>
         )}
       </div>
@@ -253,13 +337,17 @@ export default function Chat({
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Transmit: quote, research, or paper proposal…"
+            placeholder={
+              locked
+                ? "Sign in to chat…"
+                : "e.g. Quote AAPL or propose 1 share of SPY…"
+            }
             className="flex-1 rounded-xl border border-line bg-ink/90 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-accent/50"
-            disabled={busy}
+            disabled={busy || locked}
           />
           <button
             type="submit"
-            disabled={busy || !input.trim()}
+            disabled={busy || locked || !input.trim()}
             className="hud-btn-primary disabled:opacity-40"
           >
             {busy ? "…" : "Send"}
@@ -288,7 +376,7 @@ export default function Chat({
                 {
                   id: crypto.randomUUID(),
                   role: "system",
-                  text: "Proposal rejected — nothing sent to broker.",
+                  text: "Proposal rejected / cancelled.",
                 },
               ]);
             }

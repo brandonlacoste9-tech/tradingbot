@@ -1,18 +1,18 @@
 "use client";
 
 const STEPS = [
-  { n: "01", t: "Research", d: "Grok searches, quotes, and reads the book" },
-  { n: "02", t: "Propose", d: "Limit order + thesis lands on the board" },
-  { n: "03", t: "Policy", d: "Hard risk rules — never in the prompt" },
-  { n: "04", t: "Confirm", d: "You approve inside the TTL (paper only)" },
+  { n: "01", t: "Research", d: "Ask Grok for quotes, news, or ideas" },
+  { n: "02", t: "Propose", d: "It may suggest a paper limit order" },
+  { n: "03", t: "Policy", d: "Risk rules check size, cash, and limits" },
+  { n: "04", t: "Confirm", d: "You approve — then it fills on paper only" },
 ];
 
 export default function HowItWorks() {
   return (
     <div className="hud-panel !py-3">
       <div className="hud-panel-header !mb-2 !border-0 !pb-0">
-        <span className="hud-label">Desk pipeline</span>
-        <span className="font-mono text-[10px] text-mist">control plane</span>
+        <span className="hud-label">How it works</span>
+        <span className="text-[10px] text-mist">paper only</span>
       </div>
       <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {STEPS.map((s, i) => (

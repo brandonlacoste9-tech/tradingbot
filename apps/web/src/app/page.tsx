@@ -1,5 +1,6 @@
 "use client";
 
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useState } from "react";
 import Chat from "@/components/Chat";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
@@ -20,7 +21,32 @@ import type {
   PositionRow,
 } from "@/lib/types";
 
+const clerkEnabled = Boolean(
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+);
+
 export default function HomePage() {
+  if (clerkEnabled) {
+    return <HomePageClerk />;
+  }
+  return <HomePageBody isLoaded isSignedIn />;
+}
+
+function HomePageClerk() {
+  const { isLoaded, isSignedIn } = useAuth();
+  return (
+    <HomePageBody isLoaded={isLoaded} isSignedIn={Boolean(isSignedIn)} />
+  );
+}
+
+function HomePageBody({
+  isLoaded: authLoaded,
+  isSignedIn: signedIn,
+}: {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+}) {
+
   const [healthInfo, setHealthInfo] = useState<HealthInfo | null>(null);
   const [apiOk, setApiOk] = useState<boolean | null>(null);
   const [conn, setConn] = useState<ConnectionInfo | null>(null);
@@ -49,6 +75,16 @@ export default function HomePage() {
       setApiOk(false);
       setHealthInfo(null);
     }
+    if (clerkEnabled && !signedIn) {
+      setJournal([]);
+      setAccount(null);
+      setPositions([]);
+      setPortfolioSource("—");
+      setConn(null);
+      setUsage(null);
+      setPlan(null);
+      return;
+    }
     try {
       const j = await listJournal();
       setJournal(j.entries);
@@ -72,22 +108,25 @@ export default function HomePage() {
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [signedIn]);
 
   useEffect(() => {
+    if (!authLoaded) return;
     void (async () => {
       setLoading(true);
       await refresh();
-      try {
-        const c = await validateConnection();
-        setConn(c);
-        await refresh();
-      } catch {
-        /* user can sync */
+      if (signedIn) {
+        try {
+          const c = await validateConnection();
+          setConn(c);
+          await refresh();
+        } catch {
+          /* user can sync */
+        }
       }
       setLoading(false);
     })();
-  }, [refresh]);
+  }, [refresh, authLoaded, signedIn]);
 
   async function onValidate() {
     setConnError(null);
@@ -116,8 +155,10 @@ export default function HomePage() {
               <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
                 IndieTrades
               </h1>
-              <p className="mt-1 max-w-md text-sm text-mist">
-                indietrades.com · research → policy → confirm · paper fills only
+              <p className="mt-1 max-w-lg text-sm leading-relaxed text-mist">
+                Chat with Grok → it may propose a trade →{" "}
+                <strong className="font-medium text-slate-300">you confirm</strong>{" "}
+                → paper fill only. No live brokerage.
               </p>
               <div className="mt-3">
                 <UserBar />
@@ -154,14 +195,19 @@ export default function HomePage() {
 
           <aside className="flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
             <Panel
-              title="Portfolio telemetry"
-              label="book"
-              badge={loading ? "…" : "SIM"}
+              title="Paper book"
+              label="portfolio"
+              badge={loading ? "…" : signedIn ? "SIM" : "—"}
             >
               {connError && (
-                <p className="mb-2 font-mono text-sm text-bad">{connError}</p>
+                <p className="mb-2 text-sm text-bad">{connError}</p>
               )}
-              {loading && !equity ? (
+              {authLoaded && !signedIn ? (
+                <Empty
+                  title="Sign in to see your book"
+                  body="Each account gets a $100k paper portfolio. No real money."
+                />
+              ) : loading && !equity ? (
                 <SkeletonStats />
               ) : (
                 <div className="grid grid-cols-3 gap-2">
@@ -170,19 +216,22 @@ export default function HomePage() {
                   <Stat label="Buying power" value={fmtMoney(bp)} />
                 </div>
               )}
-              <dl className="mt-3 space-y-1.5 border-t border-line/70 pt-3 font-mono text-xs">
-                <KV k="Account" v={conn?.account_id || account?.id || "—"} />
-                <KV k="Backend" v={conn?.backend || portfolioSource} />
-                <KV k="Paper" v={conn?.is_paper === false ? "no" : "yes"} />
-                <KV
-                  k="Last check"
-                  v={
-                    conn?.last_validated
-                      ? new Date(conn.last_validated).toLocaleString()
-                      : "—"
-                  }
-                />
-              </dl>
+              {signedIn && (
+                <dl className="mt-3 space-y-1.5 border-t border-line/70 pt-3 font-mono text-xs">
+                  <KV k="Account" v={conn?.account_id || account?.id || "—"} />
+                  <KV k="Backend" v={conn?.backend || portfolioSource} />
+                  <KV k="Paper" v={conn?.is_paper === false ? "no" : "yes"} />
+                </dl>
+              )}
+              {authLoaded && !signedIn && clerkEnabled && (
+                <div className="mt-3">
+                  <SignInButton mode="modal">
+                    <button type="button" className="hud-btn w-full text-center">
+                      Sign in
+                    </button>
+                  </SignInButton>
+                </div>
+              )}
             </Panel>
 
             <Panel
@@ -263,11 +312,10 @@ export default function HomePage() {
             <Panel title="Safety rails" label="policy">
               <ul className="space-y-2 text-xs leading-relaxed text-mist">
                 {[
-                  "Paper-only by construction (sim / IBKR paper)",
-                  "Grok researches; policy engine is pure code",
-                  "Confirm TTL before any order reaches the book",
-                  "Idempotent client_order_id on every submit",
-                  "Free chat cap; Pro via Stripe when configured",
+                  "Paper trading only — simulated fills, not a live broker",
+                  "Grok researches; risk rules run in code (not the LLM)",
+                  "You must confirm every order before it hits the book",
+                  "Free daily chat cap; Indie Pro / Pro+ on Plans",
                 ].map((t) => (
                   <li key={t} className="flex gap-2">
                     <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent/60" />

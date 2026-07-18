@@ -113,7 +113,22 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <ClerkProvider>
+        <ClerkProvider
+          localization={{
+            signIn: {
+              start: {
+                title: "Sign in to IndieTrades",
+                subtitle: "Paper desk · research → confirm · no live brokerage",
+              },
+            },
+            signUp: {
+              start: {
+                title: "Join IndieTrades",
+                subtitle: "Free paper desk. Upgrade anytime on Plans.",
+              },
+            },
+          }}
+        >
           <ClerkTokenSync />
           <AuthChrome />
           {children}
