@@ -44,6 +44,11 @@ from app.brokers import BrokerError, get_broker
 from app.brokers.factory import get_broker_async, sim_tenant_count
 from app.config import get_settings
 from app.db.pool import close_pool, init_pool, is_db_available
+from app.integrations.plaid_svc import (
+    create_link_token,
+    is_plaid_ready,
+    plaid_status,
+)
 from app.marketdata import (
     any_md_configured,
     get_bars as md_get_bars,
@@ -76,8 +81,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 multi-user paper desk + FMP/AV/Massive market data + admin",
-    version="0.6.3",
+    description="L2 multi-user paper desk + market data + Plaid scaffold + admin",
+    version="0.6.4",
     lifespan=lifespan,
 )
 
@@ -512,7 +517,8 @@ async def health():
         "alphavantage_configured": is_alphavantage_configured(),
         "massive_configured": is_massive_configured(),
         "market_data": providers_status(),
-        "version": "0.6.3",
+        "plaid": plaid_status(),
+        "version": "0.6.4",
     }
 
 
@@ -714,6 +720,29 @@ async def market_data_status(user: Annotated[CurrentUser, Depends(get_current_us
         return {"ok": True, **base, "probe": status}
     except Exception as e:  # noqa: BLE001
         return {"ok": False, **base, "error": str(e)}
+
+
+@app.get("/plaid/status")
+async def plaid_status_route(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    """Plaid bank-link readiness (not market data)."""
+    return {**plaid_status(), "user_id": user.id, "ready": is_plaid_ready()}
+
+
+@app.post("/plaid/link-token")
+async def plaid_link_token(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    """
+    Create a Plaid Link token for optional bank connection UI.
+    Requires PLAID_CLIENT_ID + PLAID_SECRET. Does not place trades.
+    """
+    if not is_plaid_ready():
+        raise HTTPException(
+            503,
+            "Plaid not ready. Set PLAID_CLIENT_ID and PLAID_SECRET on the API.",
+        )
+    try:
+        return await create_link_token(user_id=user.id)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(400, str(e)) from e
 
 
 @app.get("/broker/status")
@@ -1167,7 +1196,8 @@ async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
         "broker_backend": settings.broker_backend,
         "llm_provider": settings.llm_provider,
         "market_data": providers_status(),
-        "version": "0.6.3",
+        "plaid": plaid_status(),
+        "version": "0.6.4",
     }
 
 

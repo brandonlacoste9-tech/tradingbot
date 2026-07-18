@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     massive_api_key: str = ""
     massive_base_url: str = "https://api.polygon.io"
 
+    # Plaid — bank account linking (optional; not market data / not broker)
+    plaid_client_id: str = ""
+    plaid_secret: str = ""
+    plaid_env: str = "sandbox"  # sandbox | development | production
+
     ibkr_host: str = "127.0.0.1"
     ibkr_port: int = 4002
     ibkr_client_id: int = 1
