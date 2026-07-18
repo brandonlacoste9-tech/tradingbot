@@ -16,7 +16,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from app.agent.loop import run_agent_turn_demo
+from app.agent.loop import run_agent_turn_demo, run_agent_turn_llm
 from app.brokers import BrokerError, get_broker
 from app.config import get_settings
 from app.policy.engine import (
@@ -319,6 +319,7 @@ async def health():
         "paper_only": settings.paper_only,
         "confirm_ttl_seconds": _ttl(),
         "broker_backend": getattr(client, "backend_name", settings.broker_backend),
+        "llm_enabled": bool(settings.anthropic_api_key),
     }
 
 
@@ -350,33 +351,71 @@ async def validate_connection():
 
 @app.post("/agent/chat")
 async def agent_chat(body: ChatRequest):
+    """
+    Chat → agent plan → tools via _execute_tool (propose → policy only).
+    LLM path when ANTHROPIC_API_KEY set; otherwise keyword demo.
+    Never submits orders here — confirm gate only.
+    """
     store.audit_event("user", "chat_message", {"message": body.message})
-    plan = run_agent_turn_demo(body.message)
+
+    async def _tool_exec(name: str, args: dict[str, Any]) -> Any:
+        return await _execute_tool(name, args or {}, store)
+
+    plan: dict[str, Any]
+    if settings.anthropic_api_key:
+        try:
+            plan = await run_agent_turn_llm(
+                body.message,
+                _tool_exec,
+                api_key=settings.anthropic_api_key,
+            )
+        except Exception as e:  # noqa: BLE001
+            store.audit_event(
+                "system",
+                "llm_fallback_demo",
+                {"error": str(e)},
+            )
+            plan = run_agent_turn_demo(body.message)
+            plan["fallback_from_llm"] = True
+            plan["llm_error"] = str(e)
+    else:
+        plan = run_agent_turn_demo(body.message)
 
     tool_results: list[dict[str, Any]] = []
     proposal: dict[str, Any] | None = None
 
-    for action in plan.get("actions") or []:
-        tool = action["tool"]
-        args = action.get("args") or {}
-        try:
-            result = await _execute_tool(tool, args, store)
-            tool_results.append({"tool": tool, "ok": True, "result": result})
-            if tool == "propose_order" and isinstance(result, dict):
-                proposal = result
-        except BrokerError as e:
-            tool_results.append(
-                {
-                    "tool": tool,
-                    "ok": False,
-                    "error": str(e),
-                    "body": getattr(e, "body", None),
-                }
-            )
-        except HTTPException:
-            raise
-        except Exception as e:  # noqa: BLE001
-            tool_results.append({"tool": tool, "ok": False, "error": str(e)})
+    # LLM path already executed tools via _tool_exec; reuse results.
+    if plan.get("mode") == "llm" and isinstance(plan.get("tool_results"), list):
+        tool_results = plan["tool_results"]
+        for tr in tool_results:
+            if (
+                tr.get("ok")
+                and tr.get("tool") == "propose_order"
+                and isinstance(tr.get("result"), dict)
+            ):
+                proposal = tr["result"]
+    else:
+        for action in plan.get("actions") or []:
+            tool = action["tool"]
+            args = action.get("args") or {}
+            try:
+                result = await _execute_tool(tool, args, store)
+                tool_results.append({"tool": tool, "ok": True, "result": result})
+                if tool == "propose_order" and isinstance(result, dict):
+                    proposal = result
+            except BrokerError as e:
+                tool_results.append(
+                    {
+                        "tool": tool,
+                        "ok": False,
+                        "error": str(e),
+                        "body": getattr(e, "body", None),
+                    }
+                )
+            except HTTPException:
+                raise
+            except Exception as e:  # noqa: BLE001
+                tool_results.append({"tool": tool, "ok": False, "error": str(e)})
 
     return {
         "assistant_text": plan.get("assistant_text"),
@@ -384,6 +423,8 @@ async def agent_chat(body: ChatRequest):
         "tool_results": tool_results,
         "proposal": proposal,
         "confirm_ttl_seconds": _ttl(),
+        "model": plan.get("model"),
+        "llm_enabled": bool(settings.anthropic_api_key),
     }
 
 

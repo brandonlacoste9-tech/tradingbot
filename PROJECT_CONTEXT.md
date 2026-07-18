@@ -171,9 +171,9 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 1. [x] **Broker abstraction** — `sim` (default) | `ibkr` skeleton | `alpaca`  
 2. [x] **Web research tools** — `web_search` tool + demo keywords  
 3. [ ] **Owner IBKR Gateway** — local paper on 4002 when ready  
-4. [ ] Wire real LLM tool loop (`agent/loop.py`)  
-5. [ ] Optional later: TradingView webhook → same policy gate  
-6. [ ] Merge `feat/broker-sim-web-search` → main + Render `BROKER_BACKEND=sim`  
+4. [x] Wire real LLM tool loop (`agent/loop.py` + main wiring)  
+5. [ ] Set `ANTHROPIC_API_KEY` on Render when ready for live LLM  
+6. [ ] Optional later: TradingView webhook → same policy gate  
 
 ---
 
