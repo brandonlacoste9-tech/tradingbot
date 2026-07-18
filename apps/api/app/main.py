@@ -83,18 +83,26 @@ async def lifespan(app: FastAPI):
     log = logging.getLogger("indietrades.posture")
     s = get_settings()
     if s.require_clerk_auth and (s.auth_mode or "").lower() not in ("clerk",):
-        log.error(
-            "REQUIRE_CLERK_AUTH=true but AUTH_MODE=%s — set AUTH_MODE=clerk",
-            s.auth_mode,
+        raise RuntimeError(
+            "REQUIRE_CLERK_AUTH=true but AUTH_MODE=%s — set AUTH_MODE=clerk "
+            "or REQUIRE_CLERK_AUTH=false" % s.auth_mode
         )
     if s.require_sim_broker and (s.broker_backend or "").lower() not in ("sim",):
-        log.error(
+        raise RuntimeError(
             "REQUIRE_SIM_BROKER=true but BROKER_BACKEND=%s — multi-tenant IBKR/Alpaca "
-            "shares one client (footgun). Use sim on SaaS.",
-            s.broker_backend,
+            "shares one client (footgun). Use sim on SaaS." % s.broker_backend
         )
     if not s.paper_only:
         log.warning("PAPER_ONLY=false — live paths may be enabled")
+    if (
+        s.stripe_dev_mode
+        and (s.auth_mode or "").lower() == "clerk"
+        and s.stripe_secret_key
+    ):
+        raise RuntimeError(
+            "STRIPE_DEV_MODE=true is unsafe in production (Clerk + Stripe live). "
+            "Set STRIPE_DEV_MODE=false."
+        )
     await init_pool()
     yield
     await close_pool()
@@ -123,8 +131,8 @@ _cors = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors,
-    # Netlify deploy previews + local ports
-    allow_origin_regex=r"https://.*\.netlify\.app|http://localhost:\d+|http://127\.0\.0\.1:\d+",
+    # Local dev only — explicit origins (CORS_ORIGINS) cover deployed frontends.
+    allow_origin_regex=r"http://localhost:\d+|http://127\.0\.0\.1:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -571,8 +579,8 @@ def _llm_ready() -> tuple[bool, str, str | None]:
 @app.get("/health")
 async def health():
     """
-    Public health. Verbose payload when PUBLIC_HEALTH_VERBOSE=true (default).
-    Set PUBLIC_HEALTH_VERBOSE=false for a slim public probe.
+    Public health. Slim payload by default.
+    Set PUBLIC_HEALTH_VERBOSE=true to expose config status (debug only).
     """
     s = get_settings()
     client = _client("health")

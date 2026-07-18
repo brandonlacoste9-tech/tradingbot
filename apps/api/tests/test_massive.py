@@ -153,6 +153,7 @@ def test_health_exposes_md_flags(monkeypatch):
     monkeypatch.setenv("FMP_API_KEY", "k")
     monkeypatch.setenv("MASSIVE_API_KEY", "m")
     monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "av")
+    monkeypatch.setenv("PUBLIC_HEALTH_VERBOSE", "true")
     get_settings.cache_clear()
     client = TestClient(app)
     r = client.get("/health")

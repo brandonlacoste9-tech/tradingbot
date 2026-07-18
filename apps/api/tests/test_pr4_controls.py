@@ -111,7 +111,9 @@ def test_user_kill_blocks_only_that_user():
     assert r_ok.status_code == 200
 
 
-def test_health_exposes_kill_and_circuit():
+def test_health_exposes_kill_and_circuit(monkeypatch):
+    monkeypatch.setenv("PUBLIC_HEALTH_VERBOSE", "true")
+    get_settings.cache_clear()
     client = TestClient(app)
     r = client.get("/health")
     assert r.status_code == 200

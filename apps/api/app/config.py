@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     require_clerk_auth: bool = False  # set true on Render when AUTH_MODE must be clerk
     require_sim_broker: bool = False  # set true to block ibkr/alpaca on shared SaaS
     expose_openapi_docs: bool = True  # set false in production
-    public_health_verbose: bool = True  # set false to slim /health
+    public_health_verbose: bool = False  # set true only for debug — exposes config status
 
     # Stripe (PR3) — leave empty to disable paid checkout
     stripe_secret_key: str = ""

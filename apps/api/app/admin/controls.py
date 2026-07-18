@@ -7,6 +7,7 @@ ADMIN_API_KEY mutations on each instance (or set env + redeploy for hard off).
 
 from __future__ import annotations
 
+import hmac
 import threading
 from datetime import datetime, timezone
 from typing import Any
@@ -128,5 +129,7 @@ def assert_admin_key(
             503,
             "Admin API disabled. Set ADMIN_API_KEY on the API service.",
         )
-    if not x_admin_key or x_admin_key.strip() != expected:
+    if not x_admin_key or not hmac.compare_digest(
+        x_admin_key.strip().encode("utf-8"), expected.encode("utf-8")
+    ):
         raise HTTPException(401, "Invalid or missing X-Admin-Key")

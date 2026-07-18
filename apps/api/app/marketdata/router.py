@@ -18,8 +18,17 @@ from app.marketdata import fmp, massive, yahoo
 
 
 def any_md_configured() -> bool:
-    # Yahoo is always on → market data always available
-    return True
+    """True when a keyed market-data provider is configured.
+
+    Yahoo is intentionally excluded: it is an unofficial free backstop, not a
+    reliable configured provider. When only Yahoo is available, callers should
+    treat market data as unavailable and use broker/sim quotes instead.
+    """
+    return (
+        fmp.is_fmp_configured()
+        or av.is_alphavantage_configured()
+        or massive.is_massive_configured()
+    )
 
 
 def providers_status() -> dict[str, Any]:
@@ -36,8 +45,9 @@ def providers_status() -> dict[str, Any]:
         "fmp": fmp.fmp_status(),
         "alphavantage": av.alphavantage_status(),
         "massive": massive.massive_status(),
-        "yahoo": yahoo.yahoo_status(),
+        "yahoo": {**yahoo.yahoo_status(), "role": "fallback_unofficial"},
         "primary": primary,
+        "keyed_provider_configured": any_md_configured(),
     }
 
 

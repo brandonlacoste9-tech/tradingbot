@@ -28,7 +28,7 @@ def yahoo_status() -> dict[str, Any]:
         "configured": True,
         "provider": "yahoo",
         "base_url": "https://query1.finance.yahoo.com",
-        "note": "Free public chart API — no key",
+        "note": "Unofficial free backstop — may rate-limit or break without notice",
     }
 
 

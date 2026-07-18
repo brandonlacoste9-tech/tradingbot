@@ -36,6 +36,7 @@ def test_plaid_ready_with_both(monkeypatch):
 
 def test_health_includes_plaid(monkeypatch):
     monkeypatch.setenv("PLAID_CLIENT_ID", "6a5b8c43110e0b000c932352")
+    monkeypatch.setenv("PUBLIC_HEALTH_VERBOSE", "true")
     get_settings.cache_clear()
     client = TestClient(app)
     r = client.get("/health")
