@@ -3,7 +3,9 @@
 **Last updated:** 2026-07-18  
 **Owner:** Brandon (Canada)  
 **Repo:** https://github.com/brandonlacoste9-tech/tradingbot  
-**Local path:** `C:\Users\north\tradingbot`
+**Local path:** `C:\Users\north\tradingbot`  
+**Team brief:** **[docs/TEAM_HANDOFF.md](./docs/TEAM_HANDOFF.md)** — what shipped, env map, next priorities  
+**Owner confirmed:** Clerk auth is **live**
 
 ---
 
@@ -28,8 +30,8 @@ We are building a **Claude-style AI trading desk**: the AI does most of the **re
 | Level | Description | Status |
 |-------|-------------|--------|
 | **L1** | Personal agent (CLI / chat + broker) | Partial |
-| **L2** | Web app: chat, policy, preflight, journal, paper default | **Live (single shared sim demo)** |
-| **L2-Paid** | Multi-user SaaS: auth, per-user paper, Stripe, quotas | **Current product target** |
+| **L2** | Web app: chat, policy, preflight, journal, paper default | **Live** |
+| **L2-Paid** | Multi-user SaaS: Clerk auth, per-user paper, Stripe, quotas | **In production path (Clerk live)** |
 | **L3** | Embedded real brokerage / live multi-tenant | Later + counsel |
 
 **Current focus: paid multi-user (per-user PaperSim + Grok + billing).**  
@@ -109,18 +111,23 @@ Pivot: `brokers/alpaca.py` → **IBKR paper adapter** (host/port/clientId or CP 
 
 ```
 tradingbot/
-├── apps/web/          # Next.js 15, static export for Netlify
-│   ├── Chat, PreflightModal (TTL countdown)
-│   └── NEXT_PUBLIC_API_URL → backend
-├── apps/api/          # FastAPI
-│   ├── policy/engine.py   # pure, unit-tested
-│   ├── brokers/alpaca.py  # paper client (BLOCKED for CA owner)
-│   ├── agent/loop.py      # demo keyword path; LLM stub
-│   ├── tools/schemas.py   # Claude-style tool schemas
-│   └── schema.sql         # Postgres model (in-memory store in MVP)
-├── netlify.toml
+├── apps/web/          # Next.js 15 App Router + Clerk (Netlify Next runtime)
+│   ├── Chat, PreflightModal, Desk UX v1
+│   ├── ClerkProvider, proxy/middleware, JWT → API
+│   └── NEXT_PUBLIC_API_URL → Render backend
+├── apps/api/          # FastAPI multi-user paper desk
+│   ├── policy/engine.py      # pure, unit-tested
+│   ├── brokers/ sim | ibkr | alpaca
+│   ├── agent/loop.py         # xAI Grok tool loop + demo fallback
+│   ├── marketdata/           # FMP → Alpha Vantage → Massive
+│   ├── billing/              # Stripe + usage caps
+│   ├── admin/                # kill switch + LLM circuit breaker
+│   ├── integrations/plaid    # link-token scaffold
+│   └── tenancy + optional Postgres
+├── docs/TEAM_HANDOFF.md      # full team brief
+├── netlify.toml              # @netlify/plugin-nextjs
 ├── render.yaml
-└── PROJECT_CONTEXT.md     # this file
+└── PROJECT_CONTEXT.md
 ```
 
 ### Deployed URLs
@@ -132,8 +139,9 @@ tradingbot/
 | Health | https://tradingbot-api-0990.onrender.com/health |
 | GitHub | https://github.com/brandonlacoste9-tech/tradingbot |
 
-Netlify env: `NEXT_PUBLIC_API_URL=https://tradingbot-api-0990.onrender.com`  
-Render: free tier (cold starts); was wired for Alpaca env vars — **re-point for IBKR**.
+Netlify: Clerk keys + `NEXT_PUBLIC_API_URL`  
+Render: xAI, market data keys, `AUTH_MODE=clerk`, admin, optional Stripe/Postgres/Plaid  
+Default broker for SaaS: **PaperSim** (not multi-tenant live IBKR).
 
 ---
 
@@ -184,9 +192,12 @@ Render: free tier (cold starts); was wired for Alpaca env vars — **re-point fo
 
 
 10. [x] **Desk UX v1** — disclaimer, status/usage strip, how-it-works, chat chips, preflight  
-11. [x] **Clerk App Router UI** — provider, proxy/middleware, SignIn/Up, JWT → API  
+11. [x] **Clerk App Router UI** — provider, proxy/middleware, SignIn/Up, JWT → API (**live**)  
+12. [ ] **Postgres on Render** enabled (survive restarts)  
+13. [ ] Stripe end-to-end paid checkout in prod/test  
+14. [ ] Onboarding / risk persona polish  
+15. [ ] Owner optional: IBKR Gateway local; not SaaS default  
 
-12. [ ] Owner optional: IBKR Gateway local; not SaaS default  
 
 
 ---
