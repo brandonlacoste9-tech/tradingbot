@@ -2,11 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Static export for simple Netlify hosting (client-only UI).
-  // FastAPI backend is separate (local / Railway / Render / Fly).
-  output: "export",
+  // Clerk middleware requires a Node server runtime (not `output: "export"`).
+  // Netlify uses @netlify/plugin-nextjs for SSR/ISR.
   images: { unoptimized: true },
-  trailingSlash: true,
 };
 
 export default nextConfig;

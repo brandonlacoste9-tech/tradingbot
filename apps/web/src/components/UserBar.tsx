@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { getDemoUserId, me, setAuthToken, setDemoUserId } from "@/lib/api";
+import ClerkAuthHeader from "./ClerkAuthHeader";
 
 const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 );
 
 /**
- * Tenant identity for PR1.
- * - Without Clerk: demo multi-user via local X-User-Id (switchable).
- * - With Clerk: loads session token into API client (wired when keys present).
+ * Tenant identity.
+ * - Without Clerk: demo multi-user via local X-User-Id.
+ * - With Clerk: Sign in / UserButton + JWT synced via ClerkTokenSync.
  */
 export default function UserBar() {
   const [userId, setUserId] = useState(getDemoUserId());
@@ -25,7 +26,7 @@ export default function UserBar() {
       setPlan(m.plan || "free");
       setAuthMode(m.auth_mode);
     } catch {
-      /* API down */
+      /* API down or signed out under AUTH_MODE=clerk */
     }
   }
 
@@ -39,7 +40,6 @@ export default function UserBar() {
     setAuthToken(null);
     setUserId(id);
     void refreshMe();
-    // Soft reload data by full page refresh so portfolio rebinds
     if (typeof window !== "undefined") {
       window.location.reload();
     }
@@ -47,6 +47,7 @@ export default function UserBar() {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs">
+      {clerkEnabled && <ClerkAuthHeader />}
       <span className="rounded-full border border-line px-2.5 py-1 font-mono text-slate-300">
         user: {userId}
       </span>
@@ -55,7 +56,7 @@ export default function UserBar() {
       </span>
       <span className="rounded-full border border-line px-2.5 py-1 text-slate-500">
         auth: {authMode}
-        {clerkEnabled ? " · clerk key set" : ""}
+        {clerkEnabled ? " · clerk" : " · demo"}
       </span>
       {!clerkEnabled && (
         <div className="flex items-center gap-1">

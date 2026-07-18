@@ -1,16 +1,13 @@
 # Monorepo: Next.js app lives in apps/web
-# Netlify Site settings should match this file (or leave blank and use this).
+# Clerk + App Router need the Next.js runtime (not static `out/` export).
 
 [build]
   base = "apps/web"
   command = "npm run build"
-  publish = "out"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
 
-# SPA-style fallback (static export already emits index.html for /)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

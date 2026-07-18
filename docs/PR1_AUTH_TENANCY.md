@@ -31,13 +31,16 @@ CLERK_JWKS_URL=https://YOUR.clerk.accounts.dev/.well-known/jwks.json
 # CLERK_AUDIENCE=
 ```
 
-Frontend (Netlify):
+Frontend (Netlify + local):
 
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
 ```
 
-Then wire `setAuthToken(await session.getToken())` from Clerk (next PR if publishable key present).
+UI: `<ClerkProvider>`, `proxy.ts` / `middleware.ts` with `clerkMiddleware()`,  
+`<Show>`, `<SignInButton>`, `<SignUpButton>`, `<UserButton>`.  
+`ClerkTokenSync` pushes the session JWT into the API client (`Authorization: Bearer`).
 
 ## Verify isolation
 
