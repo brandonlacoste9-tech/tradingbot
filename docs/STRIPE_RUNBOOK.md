@@ -13,14 +13,17 @@ PR3 code is shipped. This is env + Dashboard + verification only.
 
 1. ~~Create Pro price~~ done — use Pro price above.
 2. **Developers → API keys** → Secret key on Render (`sk_live_...` set).
-3. **Developers → Webhooks → Add endpoint**
-   - URL: `https://tradingbot-api-0990.onrender.com/billing/webhook`
-   - Events:
+3. **Developers → Webhooks → Add/edit endpoint**
+   - **Must hit the FastAPI backend**, not the Next.js site:
+     - ✅ `https://tradingbot-api-0990.onrender.com/billing/webhook`
+     - ❌ `https://www.indietrades.com/api/stripe/webhook` (no such Next route)
+   - Events (minimum):
      - `checkout.session.completed`
      - `customer.subscription.created`
      - `customer.subscription.updated`
      - `customer.subscription.deleted`
-   - Copy **Signing secret** → `STRIPE_WEBHOOK_SECRET` (`whsec_...`)
+   - Optional (logged/ignored unless you add handlers): `invoice.payment_succeeded`, `invoice.payment_failed`
+   - Copy **Signing secret** → `STRIPE_WEBHOOK_SECRET` on **Render** (`whsec_...`)
 4. **Settings → Billing → Customer portal** → enable cancel / update payment method.
 
 ## 2. Render env (`tradingbot-api`)

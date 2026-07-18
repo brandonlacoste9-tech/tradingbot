@@ -16,3 +16,6 @@ apps/web/.env.local
 
 # Local Netlify folder
 .netlify
+
+.env.stripe.local
+apps/api/.env.stripe.local
