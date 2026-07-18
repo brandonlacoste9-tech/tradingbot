@@ -200,14 +200,14 @@ function HomePageBody({
         <WhyPaper defaultOpen={!signedIn} />
 
         <div className="grid gap-4 lg:grid-cols-12">
-          <section className="min-h-[560px] lg:col-span-7 lg:h-[calc(100vh-12rem)]">
+          <section className="order-1 min-h-0 lg:col-span-7 lg:h-[calc(100vh-12rem)]">
             <Chat
               onProposalSubmitted={() => void refresh()}
               onActivity={() => void refresh()}
             />
           </section>
 
-          <aside className="flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
+          <aside className="order-2 flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
             <Panel
               title="Paper book"
               label="portfolio"

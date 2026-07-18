@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import {
   ClerkProvider,
   Show,
@@ -9,6 +9,7 @@ import {
 import { Geist, Geist_Mono } from "next/font/google";
 import ClerkTokenSync from "@/components/ClerkTokenSync";
 import { IndieTradesLogo } from "@/components/indie-trades-logo";
+import MobileBottomNav from "@/components/mobile-bottom-nav";
 import ProductionBanner from "@/components/production-banner";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
@@ -21,6 +22,17 @@ import {
 import "./globals.css";
 
 const siteUrl = getSiteUrl();
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#060b14" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f1e8" },
+  ],
+};
 
 /** Prevent theme flash before React hydrates */
 const themeBootScript = `
@@ -89,16 +101,26 @@ const clerkPk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 function AuthChrome() {
   return (
-    <header className="relative z-50 flex h-14 items-center justify-between border-b border-line/80 bg-panel/70 px-4 backdrop-blur-xl sm:h-16 sm:px-6">
-      <div className="flex items-center gap-3 sm:gap-6">
+    <header
+      className="relative z-50 flex h-14 items-center justify-between gap-2 border-b border-line/80 bg-panel/80 px-3 backdrop-blur-xl sm:h-16 sm:px-6"
+      style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-6">
         <a
           href="/"
-          className="flex items-center transition hover:opacity-90"
+          className="flex min-w-0 shrink-0 items-center transition hover:opacity-90"
           aria-label="IndieTrades home"
         >
-          <IndieTradesLogo size={36} withWordmark />
+          {/* Mark always; wordmark from sm up */}
+          <span className="sm:hidden">
+            <IndieTradesLogo size={32} withWordmark={false} />
+          </span>
+          <span className="hidden sm:inline">
+            <IndieTradesLogo size={36} withWordmark />
+          </span>
         </a>
-        <nav className="flex items-center gap-1 sm:gap-2">
+        {/* Desktop / tablet nav — phones use bottom bar */}
+        <nav className="hidden items-center gap-1 sm:flex sm:gap-2">
           <a
             href="/"
             className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
@@ -125,7 +147,7 @@ function AuthChrome() {
           </a>
         </nav>
       </div>
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         <span className="hidden items-center gap-1.5 rounded-full border border-good/30 bg-good/5 px-2.5 py-1 font-mono text-xs text-good sm:inline-flex">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
           PAPER ONLY
@@ -135,7 +157,7 @@ function AuthChrome() {
           <SignInButton mode="modal">
             <button
               type="button"
-              className="cursor-pointer rounded-full border border-line px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-accent/50 hover:text-white"
+              className="min-h-10 cursor-pointer rounded-full border border-line px-3 py-2 text-xs font-medium text-slate-200 transition hover:border-accent/50 hover:text-white sm:px-4 sm:text-sm"
             >
               Sign in
             </button>
@@ -143,7 +165,7 @@ function AuthChrome() {
           <SignUpButton mode="modal">
             <button
               type="button"
-              className="hud-btn-primary h-10 cursor-pointer rounded-full px-5 text-sm sm:h-11"
+              className="hud-btn-primary hidden min-h-10 cursor-pointer rounded-full px-5 text-sm sm:inline-flex sm:h-11 sm:items-center"
             >
               Sign Up
             </button>
@@ -170,11 +192,12 @@ export default function RootLayout({
         <head>
           <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
         </head>
-        <body className="flex min-h-full flex-col">
+        <body className="flex min-h-full flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] md:pb-0">
           <header className="relative z-50 flex h-14 items-center justify-end border-b border-line/80 bg-panel/70 px-4 backdrop-blur-xl sm:h-16 sm:px-6">
             <ThemeToggle />
           </header>
           {children}
+          <MobileBottomNav />
         </body>
       </html>
     );
@@ -185,7 +208,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         <ClerkProvider
           localization={{
             signIn: {
@@ -206,6 +229,7 @@ export default function RootLayout({
           <ProductionBanner />
           <AuthChrome />
           {children}
+          <MobileBottomNav />
         </ClerkProvider>
       </body>
     </html>

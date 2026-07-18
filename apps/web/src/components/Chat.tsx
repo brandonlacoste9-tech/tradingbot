@@ -210,7 +210,7 @@ function ChatBody({
   );
 
   return (
-    <div className="hud-panel flex h-full min-h-[480px] flex-col !p-0 overflow-hidden">
+    <div className="hud-panel flex h-full min-h-[min(70dvh,560px)] flex-col !p-0 overflow-hidden sm:min-h-[480px]">
       <div className="border-b border-line/80 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -326,9 +326,9 @@ function ChatBody({
         )}
       </div>
 
-      <div className="border-t border-line/80 bg-ink/40 p-3">
+      <div className="sticky bottom-0 border-t border-line/80 bg-ink/90 p-3 backdrop-blur-md supports-[backdrop-filter]:bg-ink/75">
         <form
-          className="flex gap-2"
+          className="flex items-stretch gap-2"
           onSubmit={(e) => {
             e.preventDefault();
             void sendText(input);
@@ -340,15 +340,17 @@ function ChatBody({
             placeholder={
               locked
                 ? "Sign in to chat…"
-                : "e.g. Quote AAPL or propose 1 share of SPY…"
+                : "Quote AAPL or propose SPY…"
             }
-            className="flex-1 rounded-xl border border-line bg-ink/90 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-accent/50"
+            enterKeyHint="send"
+            autoComplete="off"
+            className="min-h-11 flex-1 rounded-xl border border-line bg-ink/90 px-3 py-2.5 text-base text-white outline-none placeholder:text-slate-600 focus:border-accent/50 sm:text-sm"
             disabled={busy || locked}
           />
           <button
             type="submit"
             disabled={busy || locked || !input.trim()}
-            className="hud-btn-primary disabled:opacity-40"
+            className="hud-btn-primary min-h-11 shrink-0 px-4 disabled:opacity-40"
           >
             {busy ? "…" : "Send"}
           </button>

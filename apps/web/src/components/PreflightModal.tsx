@@ -80,7 +80,10 @@ export default function PreflightModal({ proposal, onClose }: Props) {
       aria-modal="true"
       aria-labelledby="preflight-title"
     >
-      <div className="w-full max-w-lg rounded-t-2xl border border-line bg-panel shadow-2xl sm:rounded-2xl">
+      <div
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-line bg-panel shadow-2xl sm:max-h-[90vh] sm:rounded-2xl"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
         <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -190,12 +193,12 @@ export default function PreflightModal({ proposal, onClose }: Props) {
           )}
         </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-line px-5 py-4 sm:flex-row sm:gap-3">
+        <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t border-line bg-panel px-4 py-3 sm:static sm:flex-row sm:gap-3 sm:px-5 sm:py-4">
           <button
             type="button"
             disabled={busy}
             onClick={() => onClose()}
-            className="flex-1 rounded-xl border border-line px-4 py-2.5 text-slate-300 hover:bg-ink"
+            className="min-h-12 flex-1 rounded-xl border border-line px-4 py-3 text-slate-300 hover:bg-ink"
           >
             Close
           </button>
@@ -203,7 +206,7 @@ export default function PreflightModal({ proposal, onClose }: Props) {
             type="button"
             disabled={busy}
             onClick={() => void onReject()}
-            className="flex-1 rounded-xl border border-bad/40 bg-bad/10 px-4 py-2.5 text-bad hover:bg-bad/20"
+            className="min-h-12 flex-1 rounded-xl border border-bad/40 bg-bad/10 px-4 py-3 text-bad hover:bg-bad/20"
           >
             Reject
           </button>
@@ -211,7 +214,7 @@ export default function PreflightModal({ proposal, onClose }: Props) {
             type="button"
             disabled={busy || expired}
             onClick={() => void onConfirm()}
-            className="flex-1 rounded-xl bg-good px-4 py-2.5 font-medium text-ink hover:bg-good/90 disabled:opacity-40"
+            className="min-h-12 flex-1 rounded-xl bg-good px-4 py-3 text-base font-semibold text-ink hover:bg-good/90 disabled:opacity-40"
           >
             {busy ? "Working…" : "Confirm paper trade"}
           </button>

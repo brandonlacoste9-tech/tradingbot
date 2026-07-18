@@ -73,7 +73,22 @@
 }
 
 html {
-  font-size: 125%; /* 20px base — second step up for readability */
+  /* Phone: 16px — large desktop type was crowding small screens */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 112.5%; /* ~18px tablet+ */
+  }
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 118.75%; /* ~19px desktop */
+  }
 }
 
 body {
@@ -92,8 +107,35 @@ body {
     linear-gradient(var(--bg-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
   background-size: auto, auto, 48px 48px, 48px 48px;
-  background-attachment: fixed;
+  /* fixed attachment janks on iOS — scroll on small screens */
+  background-attachment: scroll;
   min-height: 100%;
+  min-height: 100dvh;
+  /* avoid horizontal bounce from full-bleed panels */
+  overflow-x: hidden;
+}
+
+@media (min-width: 768px) {
+  body {
+    background-attachment: fixed;
+  }
+}
+
+/* Comfortable touch targets on phone */
+@media (max-width: 767px) {
+  button,
+  a.hud-btn,
+  a.hud-btn-primary,
+  .hud-btn-primary,
+  input,
+  textarea,
+  select {
+    min-height: 44px;
+  }
+  .hud-panel {
+    padding: 0.875rem;
+    border-radius: 0.875rem;
+  }
 }
 
 * {

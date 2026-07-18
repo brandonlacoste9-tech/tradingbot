@@ -307,10 +307,10 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   }
 
   return (
-    <main className="relative min-h-screen pb-12">
+    <main className="relative min-h-screen pb-4 sm:pb-12">
       {celebrate && (
-        <div className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center pt-24 animate-pulse">
-          <span className="rounded-2xl border border-good/40 bg-ink/90 px-5 py-3 text-center text-lg font-semibold text-good shadow-xl backdrop-blur-md sm:text-2xl">
+        <div className="pointer-events-none fixed inset-0 z-40 flex items-start justify-center px-4 pt-20 animate-pulse sm:pt-24">
+          <span className="rounded-2xl border border-good/40 bg-ink/90 px-4 py-3 text-center text-base font-semibold text-good shadow-xl backdrop-blur-md sm:px-5 sm:text-2xl">
             {celebrate}
           </span>
         </div>
@@ -318,48 +318,45 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
 
       {/* Sticky paper bar */}
       <div className="sticky top-0 z-30 border-b border-good/30 bg-good/10 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2.5 sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/15 px-2.5 py-1 font-mono text-xs font-bold uppercase tracking-wider text-good">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6 sm:py-2.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/40 bg-good/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-good sm:text-xs">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
               Paper only
             </span>
-            <span className="text-xs text-mist sm:text-sm">
+            <span className="hidden text-xs text-mist sm:inline sm:text-sm">
               Simulated fills · real symbols · not a live brokerage
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <a
-              href="/"
-              className="rounded-full border border-line px-3 py-1.5 text-xs text-mist hover:text-white"
-            >
-              AI Desk
-            </a>
             <button
               type="button"
               onClick={() => setShowFaq((v) => !v)}
-              className="rounded-full border border-line px-3 py-1.5 text-xs text-mist hover:text-white"
+              className="min-h-9 rounded-full border border-line px-3 py-1.5 text-xs text-mist hover:text-white"
             >
-              {showFaq ? "Hide tips" : "How paper works"}
+              {showFaq ? "Hide tips" : "Tips"}
             </button>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-          <div>
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-5">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5 sm:gap-4">
+          <div className="min-w-0">
             <p className="hud-label mb-1">Trade floor</p>
-            <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="bridge-title text-xl font-bold tracking-tight sm:text-3xl">
               Practice like it&apos;s real
             </h1>
             <p className="mt-1 max-w-xl text-sm text-mist">
-              Tap a symbol → set size → review → confirm. Policy keeps size honest.
-              Grok research lives on the{" "}
-              <a href="/" className="text-accent hover:underline">
-                AI Desk
-              </a>
-              .
+              Tap symbol → size → review → confirm.
+              <span className="hidden sm:inline">
+                {" "}
+                Grok research on the{" "}
+                <a href="/" className="text-accent hover:underline">
+                  AI Desk
+                </a>
+                .
+              </span>
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -369,7 +366,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 void refresh();
                 void refreshQuotes();
               }}
-              className="rounded-full border border-line px-4 py-2 text-xs font-medium text-slate-300 hover:border-accent/40"
+              className="min-h-10 rounded-full border border-line px-4 py-2 text-xs font-medium text-slate-300 hover:border-accent/40"
             >
               Refresh
             </button>
@@ -377,7 +374,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               type="button"
               disabled={resetBusy}
               onClick={() => void onReset()}
-              className="rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn hover:bg-warn/20 disabled:opacity-50"
+              className="min-h-10 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn hover:bg-warn/20 disabled:opacity-50"
             >
               {resetBusy ? "Resetting…" : "Reset $100k"}
             </button>
@@ -412,7 +409,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           </div>
         )}
 
-        {/* Account strip — Webull-style */}
+        {/* Account strip — 2 cols phone, 5 desktop; Day P&L spans on phone */}
         <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
           <Stat label="Equity" value={loading ? "…" : fmtMoney(equity)} />
           <Stat label="Cash" value={loading ? "…" : fmtMoney(cash)} />
@@ -429,12 +426,14 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <Stat
             label="Positions"
             value={loading ? "…" : String(positions.length)}
+            className="col-span-2 sm:col-span-1"
           />
         </div>
 
+        {/* Phone: ticket first (order-1), then watchlist, then positions */}
         <div className="grid gap-4 lg:grid-cols-12">
           {/* Watchlist */}
-          <section className="hud-panel lg:col-span-4">
+          <section className="hud-panel order-2 lg:order-none lg:col-span-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Watchlist</h2>
               <span className="font-mono text-xs uppercase text-mist">
@@ -508,8 +507,8 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             </form>
           </section>
 
-          {/* Order ticket */}
-          <section className="hud-panel lg:col-span-4">
+          {/* Order ticket — first on phone for the AAPL loop */}
+          <section className="hud-panel order-1 lg:order-none lg:col-span-4">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Order ticket</h2>
               <span className="rounded-full border border-good/30 bg-good/10 px-2 py-0.5 font-mono text-xs font-bold text-good">
@@ -644,7 +643,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               <button
                 type="submit"
                 disabled={busy}
-                className="hud-btn-primary w-full rounded-xl py-3.5 text-sm font-bold disabled:opacity-50"
+                className="hud-btn-primary min-h-12 w-full rounded-xl py-3.5 text-base font-bold disabled:opacity-50"
               >
                 {busy ? "Checking policy…" : "Review order →"}
               </button>
@@ -655,7 +654,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           </section>
 
           {/* Positions + fills */}
-          <section className="flex flex-col gap-4 lg:col-span-4">
+          <section className="order-3 flex flex-col gap-4 lg:order-none lg:col-span-4">
             <div className="hud-panel flex-1">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-white">Positions</h2>
@@ -773,13 +772,17 @@ function Stat({
   label,
   value,
   valueClass,
+  className = "",
 }: {
   label: string;
   value: string;
   valueClass?: string;
+  className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-line/70 bg-panel/60 px-3 py-3">
+    <div
+      className={`rounded-xl border border-line/70 bg-panel/60 px-3 py-3 ${className}`}
+    >
       <p className="font-mono text-xs uppercase tracking-wider text-mist">
         {label}
       </p>
