@@ -165,7 +165,11 @@ def test_health_exposes_md_flags(monkeypatch):
 
 
 def test_market_status_without_keys():
+    """Yahoo free provider is always on — status endpoint still works without API keys."""
     client = TestClient(app)
     r = client.get("/market/status", headers={"X-User-Id": "md-user"})
     assert r.status_code == 200
-    assert r.json()["ok"] is False
+    body = r.json()
+    assert body.get("yahoo", {}).get("configured") is True
+    # May be ok True (Yahoo probe) or False if network blocked in CI
+    assert "ok" in body

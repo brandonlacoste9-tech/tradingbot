@@ -803,19 +803,18 @@ async def billing_webhook(request: Request):
 
 @app.get("/market/status")
 async def market_data_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
-    """FMP/Massive market-data health (not a broker)."""
+    """Market-data health (FMP/AV/Massive + free Yahoo). Not a broker."""
     base = {**providers_status(), "user_id": user.id}
-    if not any_md_configured():
-        return {
-            **base,
-            "ok": False,
-            "note": "Set FMP_API_KEY and/or MASSIVE_API_KEY on the API",
-        }
     try:
         status = await md_market_status()
         return {"ok": True, **base, "probe": status}
     except Exception as e:  # noqa: BLE001
-        return {"ok": False, **base, "error": str(e)}
+        return {
+            **base,
+            "ok": False,
+            "error": str(e),
+            "note": "Yahoo free quotes are always on; FMP/AV/Massive keys improve coverage",
+        }
 
 
 @app.get("/market/quote")
