@@ -108,7 +108,7 @@ function HeroShot() {
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/landing/trade-floor-v2.jpg"
+          src="/landing/trade-floor-v3.jpg"
           alt="IndieTrades paper trade floor with chart, ticket, and blotter"
           width={1400}
           height={900}
@@ -189,6 +189,7 @@ export default function MarketingLandingPhotos() {
           <IndieTradesLogo
             size={44}
             withWordmark
+            showTagline={false}
             className="origin-left scale-110"
           />
         </div>

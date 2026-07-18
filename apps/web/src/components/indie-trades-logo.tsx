@@ -7,6 +7,8 @@
 type Props = {
   size?: number;
   withWordmark?: boolean;
+  /** Hide "paper desk" tagline under the wordmark */
+  showTagline?: boolean;
   className?: string;
   /** default = framed tile; plain = symbol only; compact = header size */
   variant?: "default" | "plain";
@@ -138,6 +140,7 @@ export function IndieTradesMark({
 export function IndieTradesLogo({
   size = 36,
   withWordmark = true,
+  showTagline = true,
   className = "",
   variant = "default",
 }: Props) {
@@ -153,9 +156,11 @@ export function IndieTradesLogo({
           <span className="block text-sm font-semibold tracking-wide text-white sm:text-[15px]">
             Indie<span className="text-accent">Trades</span>
           </span>
-          <span className="hidden font-mono text-[9px] uppercase tracking-[0.18em] text-accent/55 sm:block">
-            paper desk
-          </span>
+          {showTagline && (
+            <span className="hidden font-mono text-[9px] uppercase tracking-[0.18em] text-accent/55 sm:block">
+              paper desk
+            </span>
+          )}
         </span>
       )}
     </span>

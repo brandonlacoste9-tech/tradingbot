@@ -3,8 +3,8 @@
 import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 import { IndieTradesLogo, IndieTradesMark } from "@/components/indie-trades-logo";
 
-/** Sole hero — second floor shot (full pixel UI: Paper only · Trade floor) */
-const TRADE_FLOOR_HERO = "/landing/trade-floor-v2.jpg";
+/** Sole hero — live capture of Trade floor chrome (Paper only · chart · ticket · blotter) */
+const TRADE_FLOOR_HERO = "/landing/trade-floor-v3.jpg";
 
 const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
@@ -159,6 +159,7 @@ export default function MarketingLandingClassic() {
           <IndieTradesLogo
             size={44}
             withWordmark
+            showTagline={false}
             className="origin-left scale-110"
           />
         </div>
