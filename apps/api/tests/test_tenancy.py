@@ -41,12 +41,13 @@ async def test_sim_books_do_not_share_cash():
     reset_broker_cache()
     ba = get_broker("alice")
     bb = get_broker("bob")
+    # Hybrid C: limit must be >= mark to aggressive-fill (SPY seed mark ~520)
     await ba.submit_order(
         symbol="SPY",
         qty="10",
         side="buy",
         order_type="limit",
-        limit_price="100",
+        limit_price="520",
         client_order_id="alice-1",
     )
     acct_a = await ba.get_account()
