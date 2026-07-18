@@ -5,38 +5,73 @@ import PlanCheckout from "@/components/PlanCheckout";
 export const metadata: Metadata = {
   title: "Plans & pricing — IndieTrades",
   description:
-    "Free paper desk with daily chat limits, or Pro for high-volume Grok research. Human confirm, policy engine, paper fills only. Not investment advice.",
+    "Free, Pro (~$29 CAD), and Pro+ (~$59 CAD) paper desk plans. Human confirm, policy engine, paper fills. Not investment advice.",
 };
 
 const FREE_FEATURES = [
   "Full paper trading desk (PaperSim)",
-  "Research → policy → human confirm control plane",
-  "25 Grok / chat messages per day",
-  "Market data cascade (quotes & news)",
-  "Journal, audit, and preflight risk checks",
-  "Paper-only — never live brokerage by default",
+  "Research → policy → human confirm",
+  "25 chats / day",
+  "Market data cascade",
+  "Journal, audit, preflight risk checks",
+  "Paper-only by default",
 ];
 
 const PRO_FEATURES = [
   "Everything in Free",
-  "High daily chat limit (~10,000 / day)",
-  "Priority path for Grok research sessions",
-  "Same sacred confirm + policy rails",
-  "Stripe customer portal for billing",
-  "Built for serious paper practice & iteration",
+  "~10,000 chats / day",
+  "Grok research at scale",
+  "Same policy + confirm rails",
+  "Stripe customer portal",
+  "Promo codes at Checkout",
+];
+
+const PRO_PLUS_FEATURES = [
+  "Everything in Pro",
+  "~50,000 chats / day",
+  "Highest research headroom",
+  "Same sacred control plane",
+  "Best for heavy daily iteration",
+  "Portal for cancel / payment method",
 ];
 
 const COMPARE: {
   feature: string;
   free: string;
   pro: string;
+  proPlus: string;
 }[] = [
-  { feature: "Paper desk", free: "Yes", pro: "Yes" },
-  { feature: "Policy engine + confirm TTL", free: "Yes", pro: "Yes" },
-  { feature: "Daily chat / research", free: "25", pro: "~10,000" },
-  { feature: "Market data", free: "Included", pro: "Included" },
-  { feature: "Live multi-tenant brokerage", free: "No", pro: "No" },
-  { feature: "Price (CAD / month)", free: "$0", pro: "~$29" },
+  { feature: "Paper desk", free: "Yes", pro: "Yes", proPlus: "Yes" },
+  {
+    feature: "Policy + confirm TTL",
+    free: "Yes",
+    pro: "Yes",
+    proPlus: "Yes",
+  },
+  {
+    feature: "Daily chat / research",
+    free: "25",
+    pro: "~10,000",
+    proPlus: "~50,000",
+  },
+  {
+    feature: "Market data",
+    free: "Included",
+    pro: "Included",
+    proPlus: "Included",
+  },
+  {
+    feature: "Live multi-tenant brokerage",
+    free: "No",
+    pro: "No",
+    proPlus: "No",
+  },
+  {
+    feature: "Price (CAD / month)",
+    free: "$0",
+    pro: "~$29",
+    proPlus: "~$59",
+  },
 ];
 
 const FAQ: { q: string; a: string }[] = [
@@ -45,55 +80,53 @@ const FAQ: { q: string; a: string }[] = [
     a: "No. IndieTrades is a paper desk. Orders go through a policy engine and human confirm into a simulated book (PaperSim). Not a broker.",
   },
   {
-    q: "What does Pro actually unlock?",
-    a: "Mostly headroom: far higher daily Grok research / chat limits so you can iterate without hitting the free cap. The control plane (policy + confirm) is the same on Free and Pro.",
+    q: "What’s the difference between Pro and Pro+?",
+    a: "Mostly research headroom. Pro is ~10k chats/day; Pro+ is ~50k. The control plane (policy + confirm + paper fills) is the same.",
   },
   {
     q: "Can I use a promo code?",
     a: "Yes. On Stripe Checkout, choose “Add promotion code” and enter your code before paying.",
   },
   {
-    q: "How do I cancel?",
-    a: "Use Manage subscription on this page (or in the desk billing card) to open the Stripe customer portal.",
+    q: "How do I cancel or change plan?",
+    a: "Use Manage subscription on this page to open the Stripe customer portal.",
   },
   {
     q: "Is this investment advice?",
-    a: "No. Educational paper trading only. Not investment, tax, or legal advice. Past simulated performance means nothing for real markets.",
+    a: "No. Educational paper trading only. Not investment, tax, or legal advice.",
   },
 ];
 
 export default function PlansPage() {
   return (
     <main className="relative flex-1 pb-16">
-      {/* Hero */}
       <section className="border-b border-line/70 bg-panel/30">
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <p className="hud-label mb-3">pricing</p>
           <h1 className="bridge-title max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Plans built for a paper desk — not a casino broker
+            Free, Pro, and Pro+ — same rails, more research room
           </h1>
           <p className="mt-4 max-w-2xl text-base leading-relaxed text-mist sm:text-lg">
-            Start free. Upgrade to Pro when you need serious Grok research
-            volume. Every plan keeps the same rails:{" "}
+            Every plan keeps{" "}
             <span className="text-slate-200">
               research → deterministic policy → human confirm → paper fill
             </span>
-            .
+            . Upgrade only when you need higher daily chat limits.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/" className="hud-btn">
               ← Back to desk
             </Link>
             <a href="#compare" className="hud-btn">
-              Compare Free vs Pro
+              Compare all plans
             </a>
           </div>
         </div>
       </section>
 
-      {/* Cards */}
-      <section className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
-        <div className="grid gap-6 lg:grid-cols-2">
+      {/* Three tier cards */}
+      <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <div className="grid gap-6 lg:grid-cols-3">
           {/* Free */}
           <article className="hud-panel flex flex-col">
             <div className="hud-panel-header !border-0 !pb-0">
@@ -111,8 +144,7 @@ export default function PlansPage() {
               </div>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              Full control plane and paper book. Enough chat for learning the
-              desk and testing the confirm path.
+              Learn the desk and the confirm path without a card.
             </p>
             <ul className="mt-5 flex-1 space-y-2.5">
               {FREE_FEATURES.map((f) => (
@@ -132,10 +164,10 @@ export default function PlansPage() {
             </div>
           </article>
 
-          {/* Pro */}
+          {/* Pro $29 */}
           <article className="hud-panel relative flex flex-col ring-1 ring-accent/35">
             <div className="absolute -top-3 right-4 rounded-full border border-accent/40 bg-accent/15 px-3 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-accent">
-              recommended
+              popular
             </div>
             <div className="hud-panel-header !border-0 !pb-0">
               <div>
@@ -153,8 +185,7 @@ export default function PlansPage() {
               </div>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              For heavy research days — run symbols, theses, and preflights
-              without burning the free daily cap.
+              Serious research days without burning the free cap.
             </p>
             <ul className="mt-5 flex-1 space-y-2.5">
               {PRO_FEATURES.map((f) => (
@@ -165,36 +196,79 @@ export default function PlansPage() {
               ))}
             </ul>
             <div className="mt-6 space-y-3 border-t border-line/70 pt-5">
-              <PlanCheckout variant="auto" />
+              <PlanCheckout
+                variant="buy"
+                checkoutPlan="pro"
+                label="Upgrade to Pro — Checkout"
+              />
               <p className="text-[11px] leading-relaxed text-mist">
-                Secure checkout via Stripe. You can enter a{" "}
-                <strong className="text-slate-300">promotion code</strong> on
-                the Stripe payment page if you have one.
+                Promo codes accepted on Stripe Checkout.
+              </p>
+            </div>
+          </article>
+
+          {/* Pro+ $59 */}
+          <article className="hud-panel flex flex-col ring-1 ring-cyan-400/25">
+            <div className="hud-panel-header !border-0 !pb-0">
+              <div>
+                <div className="hud-label mb-1">max</div>
+                <h2 className="text-xl font-semibold text-white">Pro+</h2>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold tabular-nums text-white">
+                  ~$59
+                  <span className="text-sm font-normal text-mist"> CAD</span>
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+                  per month
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              Highest daily chat headroom for heavy multi-session work.
+            </p>
+            <ul className="mt-5 flex-1 space-y-2.5">
+              {PRO_PLUS_FEATURES.map((f) => (
+                <li key={f} className="flex gap-2 text-sm text-slate-300">
+                  <Check accent />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 space-y-3 border-t border-line/70 pt-5">
+              <PlanCheckout
+                variant="buy"
+                checkoutPlan="pro_plus"
+                label="Upgrade to Pro+ — Checkout"
+              />
+              <p className="text-[11px] leading-relaxed text-mist">
+                Same paper-only control plane as Free and Pro.
               </p>
             </div>
           </article>
         </div>
       </section>
 
-      {/* Comparison table */}
+      {/* Comparison */}
       <section
         id="compare"
         className="scroll-mt-20 border-y border-line/60 bg-panel/20"
       >
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <p className="hud-label mb-2">side by side</p>
           <h2 className="text-2xl font-semibold text-white">Compare plans</h2>
           <p className="mt-2 max-w-xl text-sm text-mist">
-            Safety rails are not a paid unlock — Free and Pro share the same
-            policy + confirm path.
+            Safety rails are not a paid unlock — Free, Pro, and Pro+ share the
+            same policy + confirm path.
           </p>
           <div className="mt-8 overflow-x-auto rounded-2xl border border-line">
-            <table className="w-full min-w-[480px] text-left text-sm">
+            <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
                 <tr className="border-b border-line bg-ink/60 font-mono text-[11px] uppercase tracking-wider text-mist">
                   <th className="px-4 py-3 font-medium">Feature</th>
                   <th className="px-4 py-3 font-medium">Free</th>
                   <th className="px-4 py-3 font-medium text-accent">Pro</th>
+                  <th className="px-4 py-3 font-medium text-accent">Pro+</th>
                 </tr>
               </thead>
               <tbody>
@@ -210,6 +284,9 @@ export default function PlansPage() {
                     <td className="px-4 py-3 font-mono text-accent">
                       {row.pro}
                     </td>
+                    <td className="px-4 py-3 font-mono text-accent">
+                      {row.proPlus}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -218,8 +295,7 @@ export default function PlansPage() {
         </div>
       </section>
 
-      {/* How it works / trust */}
-      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <p className="hud-label mb-2">control plane</p>
         <h2 className="text-2xl font-semibold text-white">
           What every plan includes
@@ -253,9 +329,8 @@ export default function PlansPage() {
         </div>
       </section>
 
-      {/* FAQ */}
       <section className="border-t border-line/60 bg-panel/15">
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
           <p className="hud-label mb-2">faq</p>
           <h2 className="text-2xl font-semibold text-white">Questions</h2>
           <dl className="mt-8 space-y-6">
@@ -271,21 +346,33 @@ export default function PlansPage() {
         </div>
       </section>
 
-      {/* Bottom CTA */}
-      <section className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-        <div className="hud-panel flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
+      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="hud-panel flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-white">
               Ready when you are
             </h2>
             <p className="mt-1 max-w-md text-sm text-mist">
-              Stay on Free as long as you like. Upgrade only if you need more
-              research volume.
+              Stay on Free, pick Pro (~$29), or Pro+ (~$59) for max headroom.
             </p>
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:items-end">
-            <PlanCheckout variant="auto" />
-            <Link href="/" className="text-center text-xs text-accent hover:underline sm:text-right">
+            <div className="flex flex-wrap gap-2">
+              <PlanCheckout
+                variant="buy"
+                checkoutPlan="pro"
+                label="Get Pro"
+              />
+              <PlanCheckout
+                variant="buy"
+                checkoutPlan="pro_plus"
+                label="Get Pro+"
+              />
+            </div>
+            <Link
+              href="/"
+              className="text-center text-xs text-accent hover:underline sm:text-right"
+            >
               Or open the desk without upgrading →
             </Link>
           </div>
@@ -303,9 +390,7 @@ function Check({ accent }: { accent?: boolean }) {
   return (
     <span
       className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] ${
-        accent
-          ? "bg-accent/20 text-accent"
-          : "bg-good/15 text-good"
+        accent ? "bg-accent/20 text-accent" : "bg-good/15 text-good"
       }`}
       aria-hidden
     >

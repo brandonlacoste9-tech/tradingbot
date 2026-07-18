@@ -109,15 +109,16 @@ function BillingPanelBody({
     }
   }, [refresh, onPlanChange]);
 
-  async function onUpgrade() {
+  async function onUpgrade(paidPlan: "pro" | "pro_plus" = "pro") {
     setBusy(true);
     setError(null);
     try {
       const origin =
         typeof window !== "undefined" ? window.location.origin : undefined;
       const session = await billingCheckout(
-        origin ? `${origin}/?billing=success` : undefined,
-        origin ? `${origin}/?billing=cancel` : undefined
+        origin ? `${origin}/plans?billing=success` : undefined,
+        origin ? `${origin}/plans?billing=cancel` : undefined,
+        paidPlan
       );
       if (session.url && typeof window !== "undefined") {
         window.location.href = session.url;
@@ -164,8 +165,10 @@ function BillingPanelBody({
 
   const plan = status?.plan || "free";
   const freeLimit = status?.plans?.free?.chat_per_day ?? 25;
-  const proLimit = status?.plans?.pro?.chat_per_day ?? 500;
+  const proLimit = status?.plans?.pro?.chat_per_day ?? 10_000;
+  const proPlusLimit = status?.plans?.pro_plus?.chat_per_day ?? 50_000;
   const proPrice = status?.plans?.pro?.price_cad ?? 29;
+  const proPlusPrice = status?.plans?.pro_plus?.price_cad ?? 59;
   const used = status?.usage?.used;
   const limit = status?.usage?.limit ?? status?.limits?.chat_per_day;
   const remaining = status?.usage?.remaining;
@@ -222,52 +225,64 @@ function BillingPanelBody({
         </p>
       )}
 
-      {/* Plan cards — always visible so users can see Free vs Pro */}
-      <div className="mb-3 grid grid-cols-2 gap-2">
+      {/* Plan cards — Free / Pro / Pro+ */}
+      <div className="mb-3 grid grid-cols-3 gap-1.5">
         <div
-          className={`rounded-xl border px-3 py-2.5 ${
+          className={`rounded-xl border px-2 py-2 ${
             plan === "free"
               ? "border-accent/50 bg-accent/10"
               : "border-line bg-ink/40"
           }`}
         >
-          <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+          <div className="font-mono text-[9px] uppercase tracking-wider text-mist">
             Free
           </div>
           <div className="mt-0.5 text-sm font-semibold text-white">$0</div>
-          <div className="mt-1 text-[11px] text-slate-400">
-            {freeLimit} chats/day · paper desk
+          <div className="mt-1 text-[10px] leading-snug text-slate-400">
+            {freeLimit}/day
           </div>
-          {plan === "free" && (
-            <div className="mt-1.5 font-mono text-[10px] text-accent">
-              current
-            </div>
-          )}
         </div>
         <div
-          className={`rounded-xl border px-3 py-2.5 ${
-            plan !== "free"
+          className={`rounded-xl border px-2 py-2 ${
+            plan === "pro"
               ? "border-accent/50 bg-accent/10"
               : "border-line bg-ink/40"
           }`}
         >
-          <div className="font-mono text-[10px] uppercase tracking-wider text-mist">
+          <div className="font-mono text-[9px] uppercase tracking-wider text-mist">
             Pro
           </div>
           <div className="mt-0.5 text-sm font-semibold text-white">
-            ~${proPrice}
-            <span className="text-xs font-normal text-mist"> CAD/mo</span>
+            ${proPrice}
           </div>
-          <div className="mt-1 text-[11px] text-slate-400">
-            {proLimit}+ chats · Grok research
+          <div className="mt-1 text-[10px] leading-snug text-slate-400">
+            {proLimit}/day
           </div>
-          {plan !== "free" && (
-            <div className="mt-1.5 font-mono text-[10px] text-accent">
-              current
-            </div>
-          )}
+        </div>
+        <div
+          className={`rounded-xl border px-2 py-2 ${
+            plan === "pro_plus"
+              ? "border-accent/50 bg-accent/10"
+              : "border-line bg-ink/40"
+          }`}
+        >
+          <div className="font-mono text-[9px] uppercase tracking-wider text-mist">
+            Pro+
+          </div>
+          <div className="mt-0.5 text-sm font-semibold text-white">
+            ${proPlusPrice}
+          </div>
+          <div className="mt-1 text-[10px] leading-snug text-slate-400">
+            {proPlusLimit}/day
+          </div>
         </div>
       </div>
+      <p className="mb-3 text-[11px] text-mist">
+        CAD/mo · details on{" "}
+        <a href="/plans" className="text-accent hover:underline">
+          /plans
+        </a>
+      </p>
 
       {pct != null && used != null && limit != null && (
         <div className="mb-3">
@@ -296,14 +311,24 @@ function BillingPanelBody({
 
       <div className="flex flex-wrap gap-2">
         {!signedOut && stripeReady && plan === "free" && (
-          <button
-            type="button"
-            disabled={busy || loading}
-            onClick={() => void onUpgrade()}
-            className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-accent/20 disabled:opacity-40"
-          >
-            {busy ? "Opening checkout…" : "Upgrade to Pro"}
-          </button>
+          <>
+            <button
+              type="button"
+              disabled={busy || loading}
+              onClick={() => void onUpgrade("pro")}
+              className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-accent/20 disabled:opacity-40"
+            >
+              {busy ? "…" : "Pro $29"}
+            </button>
+            <button
+              type="button"
+              disabled={busy || loading}
+              onClick={() => void onUpgrade("pro_plus")}
+              className="rounded-lg border border-accent/50 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent disabled:opacity-40"
+            >
+              {busy ? "…" : "Pro+ $59"}
+            </button>
+          </>
         )}
         {!signedOut && stripeReady && plan !== "free" && (
           <button

@@ -76,10 +76,11 @@ class Settings(BaseSettings):
     # Stripe (PR3) — leave empty to disable paid checkout
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
-    stripe_price_id_pro: str = ""  # price_... for Pro monthly
+    stripe_price_id_pro: str = ""  # price_... for Pro ~$29 CAD monthly
+    stripe_price_id_pro_plus: str = ""  # price_... for Pro+ ~$59 CAD monthly
     # Prefer production domain when DNS points at Netlify; Netlify subdomain still works.
-    stripe_success_url: str = "https://indietrades.com/?billing=success"
-    stripe_cancel_url: str = "https://indietrades.com/?billing=cancel"
+    stripe_success_url: str = "https://indietrades.com/plans?billing=success"
+    stripe_cancel_url: str = "https://indietrades.com/plans?billing=cancel"
     # Allow POST /billing/dev-set-plan without Stripe (local/demo only)
     stripe_dev_mode: bool = False
 

@@ -39,7 +39,7 @@ from app.billing.plans import PLAN_LIMITS, normalize_plan
 from app.billing.stripe_svc import (
     create_checkout_session,
     create_portal_session,
-    plan_from_status,
+    plan_from_subscription_object,
     stripe_configured,
     user_id_from_subscription_obj,
 )
@@ -151,6 +151,7 @@ class RejectRequest(BaseModel):
 class CheckoutRequest(BaseModel):
     success_url: str | None = None
     cancel_url: str | None = None
+    plan: str = "pro"  # pro | pro_plus
 
 
 class PortalRequest(BaseModel):
@@ -646,9 +647,10 @@ async def billing_checkout(
         session = await create_checkout_session(
             user_id=user.id,
             email=user.email or profile.get("email"),
-            success_url=body.success_url or settings.stripe_success_url,
-            cancel_url=body.cancel_url or settings.stripe_cancel_url,
+            success_url=body.success_url or get_settings().stripe_success_url,
+            cancel_url=body.cancel_url or get_settings().stripe_cancel_url,
             customer_id=profile.get("stripe_customer_id"),
+            plan=body.plan or "pro",
         )
     except Exception as e:  # noqa: BLE001
         raise HTTPException(400, str(e)) from e
@@ -725,16 +727,21 @@ async def billing_webhook(request: Request):
         customer_id = data.get("customer")
         sub_id = data.get("subscription")
         status = "active"
-        plan = "pro"
+        meta_plan = (data.get("metadata") or {}).get("plan")
+        plan = normalize_plan(meta_plan) if meta_plan else "pro"
+        if plan == "free":
+            plan = "pro"
     elif etype in (
         "customer.subscription.updated",
         "customer.subscription.created",
         "customer.subscription.deleted",
     ):
         status = data.get("status")
-        plan = plan_from_status(status)
+        plan = plan_from_subscription_object(data)
         sub_id = data.get("id")
-        user_id = user_id_from_subscription_obj(type("O", (), {"metadata": data.get("metadata") or {}})())
+        user_id = user_id_from_subscription_obj(
+            type("O", (), {"metadata": data.get("metadata") or {}})()
+        )
         if not user_id and customer_id:
             try:
                 from app.db.repo import find_user_id_by_customer

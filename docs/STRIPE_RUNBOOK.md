@@ -8,8 +8,8 @@ PR3 code is shipped. This is env + Dashboard + verification only.
 
 | Plan | Product | Price ID | Env |
 |------|---------|----------|-----|
-| Pro $29/mo | `prod_UuOr5XTY4bkMWP` | `price_1Tua3nCzqBvMqSYFpymfph1u` | **`STRIPE_PRICE_ID_PRO`** (Checkout uses this) |
-| Pro+ $59/mo | `prod_UuOrg6uejcujT8` | `price_1Tua3oCzqBvMqSYFgbmKQo5G` | `STRIPE_PRICE_ID_PRO_PLUS` (stored for later; not in Checkout yet) |
+| Pro $29/mo | `prod_UuOr5XTY4bkMWP` | `price_1Tua3nCzqBvMqSYFpymfph1u` | **`STRIPE_PRICE_ID_PRO`** (Checkout `plan=pro`) |
+| Pro+ $59/mo | `prod_UuOrg6uejcujT8` | `price_1Tua3oCzqBvMqSYFgbmKQo5G` | **`STRIPE_PRICE_ID_PRO_PLUS`** (Checkout `plan=pro_plus`) |
 
 1. ~~Create Pro price~~ done — use Pro price above.
 2. **Developers → API keys** → Secret key on Render (`sk_live_...` set).

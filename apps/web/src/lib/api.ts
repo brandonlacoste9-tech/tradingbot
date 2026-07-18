@@ -220,10 +220,14 @@ export function billingStatus() {
   }>("/billing/status");
 }
 
-export function billingCheckout(success_url?: string, cancel_url?: string) {
-  return req<{ id: string; url: string }>("/billing/checkout", {
+export function billingCheckout(
+  success_url?: string,
+  cancel_url?: string,
+  plan: "pro" | "pro_plus" = "pro"
+) {
+  return req<{ id: string; url: string; plan?: string }>("/billing/checkout", {
     method: "POST",
-    body: JSON.stringify({ success_url, cancel_url }),
+    body: JSON.stringify({ success_url, cancel_url, plan }),
   });
 }
 

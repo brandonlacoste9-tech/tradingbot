@@ -12,8 +12,15 @@ const clerkEnabled = Boolean(
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 );
 
+type PaidPlan = "pro" | "pro_plus";
+
 type Props = {
-  variant?: "pro" | "manage" | "auto";
+  /** Which paid tier this CTA purchases */
+  checkoutPlan?: PaidPlan;
+  /** Button label override */
+  label?: string;
+  /** auto: upgrade if free, manage if paid; buy: always show checkout; manage: portal only */
+  variant?: "auto" | "buy" | "manage";
 };
 
 /**
@@ -23,13 +30,7 @@ export default function PlanCheckout(props: Props) {
   if (clerkEnabled) {
     return <PlanCheckoutClerk {...props} />;
   }
-  return (
-    <PlanCheckoutBody
-      isLoaded
-      isSignedIn
-      {...props}
-    />
-  );
+  return <PlanCheckoutBody isLoaded isSignedIn {...props} />;
 }
 
 function PlanCheckoutClerk(props: Props) {
@@ -46,7 +47,9 @@ function PlanCheckoutClerk(props: Props) {
 function PlanCheckoutBody({
   isLoaded,
   isSignedIn,
-  variant = "pro",
+  checkoutPlan = "pro",
+  label,
+  variant = "auto",
 }: Props & {
   isLoaded: boolean;
   isSignedIn: boolean;
@@ -82,7 +85,6 @@ function PlanCheckoutBody({
     void refresh();
   }, [refresh]);
 
-  // After Stripe return to /plans?billing=success
   useEffect(() => {
     if (typeof window === "undefined") return;
     const q = new URLSearchParams(window.location.search);
@@ -99,7 +101,8 @@ function PlanCheckoutBody({
         typeof window !== "undefined" ? window.location.origin : "";
       const session = await billingCheckout(
         `${origin}/plans?billing=success`,
-        `${origin}/plans?billing=cancel`
+        `${origin}/plans?billing=cancel`,
+        checkoutPlan
       );
       if (session.url) {
         window.location.href = session.url;
@@ -151,35 +154,26 @@ function PlanCheckoutBody({
           </button>
         </SignInButton>
         <p className="text-xs text-mist">
-          Create a free account first, then return here for Pro.
+          Create a free account first, then return here.
         </p>
       </div>
     );
   }
 
-  const showManage =
-    variant === "manage" || (variant === "auto" && plan !== "free");
-  const showUpgrade =
-    variant === "pro" || (variant === "auto" && plan === "free");
+  const onThisPlan =
+    (checkoutPlan === "pro" && plan === "pro") ||
+    (checkoutPlan === "pro_plus" && plan === "pro_plus");
+  const isPaid = plan === "pro" || plan === "pro_plus";
 
-  return (
-    <div className="space-y-2">
-      {error && <p className="text-xs text-bad">{error}</p>}
-      {showUpgrade && plan === "free" && (
-        <button
-          type="button"
-          disabled={busy || !stripeReady}
-          onClick={() => void upgrade()}
-          className="hud-btn-primary w-full disabled:opacity-40 sm:w-auto"
-        >
-          {busy
-            ? "Opening Checkout…"
-            : stripeReady
-              ? "Upgrade to Pro — Checkout"
-              : "Stripe unavailable"}
-        </button>
-      )}
-      {(showManage || plan !== "free") && plan !== "free" && (
+  const defaultLabel =
+    checkoutPlan === "pro_plus"
+      ? "Upgrade to Pro+"
+      : "Upgrade to Pro";
+
+  if (variant === "manage" || (variant === "auto" && isPaid && onThisPlan)) {
+    return (
+      <div className="space-y-2">
+        {error && <p className="text-xs text-bad">{error}</p>}
         <button
           type="button"
           disabled={busy}
@@ -188,14 +182,48 @@ function PlanCheckoutBody({
         >
           {busy ? "Opening…" : "Manage subscription"}
         </button>
-      )}
-      {isSignedIn && (
         <p className="font-mono text-[11px] text-mist">
-          Current plan:{" "}
-          <span className="text-accent">{plan.toUpperCase()}</span>
+          Current: <span className="text-accent">{plan.toUpperCase()}</span>
+        </p>
+      </div>
+    );
+  }
+
+  // buy this tier (or auto when free / different tier)
+  if (variant === "buy" || variant === "auto") {
+    return (
+      <div className="space-y-2">
+        {error && <p className="text-xs text-bad">{error}</p>}
+        {onThisPlan ? (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void portal()}
+            className="hud-btn w-full sm:w-auto"
+          >
+            Manage subscription
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={busy || !stripeReady}
+            onClick={() => void upgrade()}
+            className="hud-btn-primary w-full disabled:opacity-40 sm:w-auto"
+          >
+            {busy
+              ? "Opening Checkout…"
+              : stripeReady
+                ? label || defaultLabel
+                : "Stripe unavailable"}
+          </button>
+        )}
+        <p className="font-mono text-[11px] text-mist">
+          Current: <span className="text-accent">{plan.toUpperCase()}</span>
           {stripeReady ? " · Stripe ready" : ""}
         </p>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return null;
 }
