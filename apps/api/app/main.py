@@ -482,16 +482,17 @@ async def _execute_tool(
 
 
 def _llm_ready() -> tuple[bool, str, str | None]:
-    """Return (enabled, provider, api_key)."""
-    provider = (settings.llm_provider or "xai").lower().strip()
+    """Return (enabled, provider, api_key). Always re-read settings (not import-time cache)."""
+    s = get_settings()
+    provider = (s.llm_provider or "xai").lower().strip()
     if provider in ("xai", "grok"):
-        key = settings.xai_api_key
+        key = (s.xai_api_key or "").strip()
         return (bool(key), "xai", key or None)
     if provider == "openai":
-        key = settings.openai_api_key
+        key = (s.openai_api_key or "").strip()
         return (bool(key), "openai", key or None)
     if provider == "anthropic":
-        key = settings.anthropic_api_key
+        key = (s.anthropic_api_key or "").strip()
         return (bool(key), "anthropic", key or None)
     return (False, provider, None)
 
