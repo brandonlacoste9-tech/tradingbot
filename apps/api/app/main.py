@@ -919,7 +919,11 @@ async def market_quote(
     Rate limited per user.
     """
     _rate_limit_quotes(user.id)
-    return await _fetch_quote_for_user(user.id, symbol)
+    q = await _fetch_quote_for_user(user.id, symbol)
+    # Marks may have moved — try passive working fills
+    mem = await _mem(user)
+    await _evaluate_and_sync_orders(user.id, mem)
+    return q
 
 
 @app.get("/market/bars")
@@ -1077,7 +1081,15 @@ async def market_quotes(
                     "error": e.detail,
                 }
             )
-    return {"quotes": out, "user_id": user.id, "paper": True}
+    # After batch marks update, evaluate passive working paper limits
+    mem = await _mem(user)
+    filled = await _evaluate_and_sync_orders(user.id, mem)
+    return {
+        "quotes": out,
+        "user_id": user.id,
+        "paper": True,
+        "working_updates": len(filled),
+    }
 
 
 @app.get("/plaid/status")
@@ -1474,6 +1486,7 @@ async def confirm_proposal(
             order_type=p.order_type,
             limit_price=p.limit_price,
             client_order_id=p.client_order_id,
+            time_in_force="day",
         )
     except BrokerError as e:
         mem.audit_event(
@@ -1490,43 +1503,81 @@ async def confirm_proposal(
         )
         raise HTTPException(502, f"Broker submit failed: {e}") from e
 
-    p.policy_status = "submitted"
+    # Phase 3 vocabulary: filled | working (hybrid C); keep submitted as fallback
+    broker_status = str(broker_resp.get("status") or "").lower()
+    if broker_status == "filled":
+        p.policy_status = "filled"
+    elif broker_status in ("working", "new", "accepted", "open", "pending_new"):
+        p.policy_status = "working"
+    else:
+        p.policy_status = "submitted"
     p.broker_order_id = broker_resp.get("id")
     mem.update_proposal(p)
     await ts.persist_proposal(user.id, p)
 
+    now_iso = datetime.now(timezone.utc).isoformat()
     order_row = {
         "id": new_id(),
         "proposal_id": p.id,
         "client_order_id": p.client_order_id,
         "broker_order_id": broker_resp.get("id"),
-        "status": broker_resp.get("status"),
+        "symbol": p.symbol,
+        "side": p.side,
+        "qty": p.qty,
+        "limit_price": p.limit_price,
+        "order_type": p.order_type,
+        "status": broker_status or broker_resp.get("status"),
+        "fill_kind": broker_resp.get("fill_kind"),
+        "filled_avg_price": broker_resp.get("filled_avg_price"),
+        "note": broker_resp.get("note"),
+        "paper": True,
+        "time_in_force": "day",
         "raw_response": broker_resp,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": now_iso,
+        "updated_at": now_iso,
     }
     mem.add_order(order_row)
     await ts.persist_order(user.id, order_row)
-    jentry = mem.add_journal(
-        summary_md=(
+
+    if p.policy_status == "filled":
+        summary = (
+            f"**PaperSim fill** {p.side} {p.qty} {p.symbol} "
+            f"@ {broker_resp.get('filled_avg_price')} "
+            f"(aggressive · not a live broker)"
+        )
+        decision_type = "filled"
+    elif p.policy_status == "working":
+        summary = (
+            f"**Working paper limit** {p.side} {p.qty} {p.symbol} "
+            f"limit={p.limit_price} Day TIF — Orders tab (not exchange matching)"
+        )
+        decision_type = "working"
+    else:
+        summary = (
             f"**Submitted** {p.side} {p.qty} {p.symbol} "
             f"(client_order_id={p.client_order_id}, broker={p.broker_order_id})"
-        ),
-        decisions=[{"type": "submitted", "proposal_id": p.id, "order": order_row}],
+        )
+        decision_type = "submitted"
+
+    jentry = mem.add_journal(
+        summary_md=summary,
+        decisions=[{"type": decision_type, "proposal_id": p.id, "order": order_row}],
     )
     await ts.persist_journal(user.id, jentry)
     mem.audit_event(
         "broker",
-        "order_submitted",
+        f"order_{decision_type}",
         {
             "proposal_id": p.id,
             "client_order_id": p.client_order_id,
             "broker_order_id": p.broker_order_id,
+            "status": p.policy_status,
         },
     )
     await ts.persist_audit(
         user.id,
         "broker",
-        "order_submitted",
+        f"order_{decision_type}",
         {"proposal_id": p.id, "broker_order_id": p.broker_order_id},
     )
 
@@ -1535,6 +1586,8 @@ async def confirm_proposal(
         "order": order_row,
         "broker": broker_resp,
         "user_id": user.id,
+        "paper": True,
+        "fill_rules": _paper_fill_rules_copy(),
     }
 
 
@@ -1621,6 +1674,71 @@ async def get_audit(
     }
 
 
+def _paper_fill_rules_copy() -> dict[str, str]:
+    return {
+        "model": "hybrid_c",
+        "aggressive": (
+            "Buy limit ≥ last/mark or sell limit ≤ last/mark (or market): "
+            "instant PaperSim fill at last/mark after you confirm."
+        ),
+        "passive": (
+            "Buy limit < last or sell limit > last: status working until "
+            "last/mark crosses, Day TIF expire, or you cancel."
+        ),
+        "honest": (
+            "Paper only — not exchange matching. No fake Level 2 or invented prints."
+        ),
+    }
+
+
+async def _evaluate_and_sync_orders(user_id: str, mem: MemoryStore) -> list[dict[str, Any]]:
+    """Run PaperSim working-order evaluation; patch mem order rows + proposals."""
+    client = await _client_async(user_id)
+    if not hasattr(client, "evaluate_working_orders"):
+        return []
+    try:
+        changed = await client.evaluate_working_orders()  # type: ignore[misc]
+    except Exception:  # noqa: BLE001
+        return []
+    if not changed:
+        return []
+    ts = get_tenant_store()
+    for bo in changed:
+        bid = bo.get("id")
+        st = str(bo.get("status") or "")
+        mem.update_order_by_broker_id(
+            str(bid),
+            status=st,
+            filled_avg_price=bo.get("filled_avg_price"),
+            fill_kind=bo.get("fill_kind"),
+            note=bo.get("note"),
+            raw_response=bo,
+            updated_at=bo.get("updated_at") or datetime.now(timezone.utc).isoformat(),
+        )
+        # Keep proposal in sync when we can find it
+        for p in list(mem.proposals.values()):
+            if p.broker_order_id == bid or p.client_order_id == bo.get("client_order_id"):
+                if st == "filled":
+                    p.policy_status = "filled"
+                elif st == "expired":
+                    p.policy_status = "expired"
+                elif st in ("cancelled", "canceled"):
+                    p.policy_status = "cancelled"
+                mem.update_proposal(p)
+                await ts.persist_proposal(user_id, p)
+                break
+        if st == "filled":
+            jentry = mem.add_journal(
+                summary_md=(
+                    f"**PaperSim fill** (passive cross) {bo.get('side')} "
+                    f"{bo.get('qty')} {bo.get('symbol')} @ {bo.get('filled_avg_price')}"
+                ),
+                decisions=[{"type": "filled", "order": bo}],
+            )
+            await ts.persist_journal(user_id, jentry)
+    return changed
+
+
 @app.get("/orders")
 async def get_orders(
     user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -1628,6 +1746,7 @@ async def get_orders(
     offset: int = 0,
 ):
     mem = await _mem(user)
+    await _evaluate_and_sync_orders(user.id, mem)
     page = page_slice(
         mem.orders,
         limit=limit,
@@ -1643,11 +1762,90 @@ async def get_orders(
         "offset": page["offset"],
         "has_more": page["has_more"],
         "user_id": user.id,
+        "paper": True,
+        "fill_rules": _paper_fill_rules_copy(),
+    }
+
+
+@app.post("/orders/{order_id}/cancel")
+async def cancel_order(
+    order_id: str,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """Cancel a working paper order (Phase 3). Not a live broker cancel."""
+    blocked, block_reason = is_trading_blocked(user.id)
+    if blocked:
+        raise HTTPException(503, f"Trading paused: {block_reason}")
+
+    mem = await _mem(user)
+    # Resolve broker id from mem row if needed
+    broker_id = order_id
+    mem_row = None
+    for o in mem.orders:
+        if (
+            o.get("id") == order_id
+            or o.get("broker_order_id") == order_id
+            or o.get("client_order_id") == order_id
+        ):
+            mem_row = o
+            broker_id = str(o.get("broker_order_id") or o.get("id") or order_id)
+            break
+
+    client = await _client_async(user.id)
+    try:
+        result = await client.cancel_order(broker_id)
+    except BrokerError as e:
+        code = getattr(e, "status_code", None) or 400
+        raise HTTPException(int(code) if int(code) < 600 else 400, str(e)) from e
+
+    st = str((result or {}).get("status") or "cancelled")
+    mem.update_order_by_broker_id(
+        broker_id,
+        status=st if st != "canceled" else "cancelled",
+        note=(result or {}).get("note"),
+        raw_response=result,
+        updated_at=datetime.now(timezone.utc).isoformat(),
+    )
+    if mem_row and mem_row.get("proposal_id"):
+        p = mem.get_proposal(str(mem_row["proposal_id"]))
+        if p and p.policy_status == "working":
+            p.policy_status = "cancelled"
+            mem.update_proposal(p)
+            await get_tenant_store().persist_proposal(user.id, p)
+
+    jentry = mem.add_journal(
+        summary_md=f"**Cancelled** working paper order {broker_id}",
+        decisions=[{"type": "cancelled", "order_id": broker_id, "result": result}],
+    )
+    await get_tenant_store().persist_journal(user.id, jentry)
+    return {
+        "ok": True,
+        "order": result,
+        "paper": True,
+        "user_id": user.id,
+        "note": "Paper cancel only — not a live broker.",
+    }
+
+
+@app.post("/orders/evaluate")
+async def evaluate_orders(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    """Re-check working paper limits vs marks (also runs on GET /orders)."""
+    mem = await _mem(user)
+    changed = await _evaluate_and_sync_orders(user.id, mem)
+    return {
+        "ok": True,
+        "changed": changed,
+        "count": len(changed),
+        "paper": True,
+        "user_id": user.id,
+        "fill_rules": _paper_fill_rules_copy(),
     }
 
 
 @app.get("/portfolio")
 async def portfolio(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    mem = await _mem(user)
+    await _evaluate_and_sync_orders(user.id, mem)
     client = await _client_async(user.id)
     try:
         account = await client.get_account()
@@ -1658,6 +1856,7 @@ async def portfolio(user: Annotated[CurrentUser, Depends(get_current_user)]):
             "source": getattr(client, "backend_name", "broker"),
             "user_id": user.id,
             "paper": True,
+            "account_note": "Simulated paper account — not a broker",
             "day_pnl": account.get("day_pnl"),
             "day_pnl_pct": account.get("day_pnl_pct"),
         }

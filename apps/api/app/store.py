@@ -99,5 +99,20 @@ class MemoryStore:
             self.orders.insert(0, order)
         return order
 
+    def update_order_by_broker_id(
+        self, broker_order_id: str, **fields: Any
+    ) -> dict[str, Any] | None:
+        """Patch mem order row matching broker_order_id or id."""
+        with self._lock:
+            for o in self.orders:
+                if (
+                    o.get("broker_order_id") == broker_order_id
+                    or o.get("id") == broker_order_id
+                    or (o.get("raw_response") or {}).get("id") == broker_order_id
+                ):
+                    o.update(fields)
+                    return o
+        return None
+
 
 store = MemoryStore()

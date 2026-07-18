@@ -57,7 +57,8 @@ def test_manual_ticket_awaits_confirm_then_fills():
         json={"proposal_id": pid},
     )
     assert c.status_code == 200, c.text
-    assert c.json()["proposal"]["policy_status"] == "submitted"
+    # Phase 3 hybrid: aggressive limit → filled (was "submitted")
+    assert c.json()["proposal"]["policy_status"] in ("filled", "submitted")
 
     port = client.get("/portfolio", headers=headers)
     assert port.status_code == 200

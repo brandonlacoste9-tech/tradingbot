@@ -2,7 +2,7 @@
 
 **Product:** IndieTrades · https://indietrades.com  
 **Surface:** `/trade` (paper trading floor)  
-**Status:** Phase 1–2 shipped · Phase 3 owner-locked **C hybrid** — see Phase 3 spec  
+**Status:** Phase 1–3 shipped (C hybrid fills) — honesty polish ongoing  
 **Date:** 2026-07-18  
 **Team status:** [`TRADE_FLOOR_TEAM_STATUS.md`](./TRADE_FLOOR_TEAM_STATUS.md) · **Phase 3:** [`TRADE_FLOOR_PHASE3.md`](./TRADE_FLOOR_PHASE3.md)
 

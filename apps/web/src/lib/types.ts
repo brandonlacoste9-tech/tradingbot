@@ -5,6 +5,7 @@ export type PolicyStatus =
   | "awaiting_confirm"
   | "confirmed"
   | "submitted"
+  | "working"
   | "filled"
   | "cancelled"
   | "expired";

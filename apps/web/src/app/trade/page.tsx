@@ -11,6 +11,7 @@ import {
 import PreflightModal from "@/components/PreflightModal";
 import SymbolChart, { type ChartBar } from "@/components/symbol-chart";
 import {
+  cancelOrder,
   createProposal,
   listOrders,
   marketBars,
@@ -182,6 +183,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const [showFaq, setShowFaq] = useState(false);
   const [celebrate, setCelebrate] = useState<string | null>(null);
   const [blotter, setBlotter] = useState<BlotterTab>("positions");
+  const [cancelBusy, setCancelBusy] = useState<string | null>(null);
   const [quotesAt, setQuotesAt] = useState<string | null>(null);
   const [session, setSession] = useState<{
     us_rth_open: boolean;
@@ -372,6 +374,48 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const selected = quotes[symbol.toUpperCase()];
   const selectedPx = selected?.price;
 
+  const workingOrders = useMemo(
+    () =>
+      orders.filter((o) => {
+        const s = String(o.status || "").toLowerCase();
+        return s === "working" || s === "new" || s === "open" || s === "accepted";
+      }),
+    [orders]
+  );
+  const fillOrders = useMemo(
+    () =>
+      orders.filter((o) => {
+        const s = String(o.status || "").toLowerCase();
+        return s === "filled" || s === "submitted";
+      }),
+    [orders]
+  );
+  const recentTerminal = useMemo(
+    () =>
+      orders.filter((o) => {
+        const s = String(o.status || "").toLowerCase();
+        return s === "cancelled" || s === "canceled" || s === "expired";
+      }),
+    [orders]
+  );
+
+  async function onCancelWorking(o: Record<string, unknown>) {
+    const id = String(o.broker_order_id || o.id || "");
+    if (!id) return;
+    setCancelBusy(id);
+    setError(null);
+    try {
+      await cancelOrder(id);
+      setFlash("Working paper order cancelled · not a live broker");
+      setBlotter("orders");
+      await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Cancel failed");
+    } finally {
+      setCancelBusy(null);
+    }
+  }
+
   const notionalPreview = useMemo(() => {
     const q = Number(qty);
     const px = Number(limit || selectedPx || 0);
@@ -545,19 +589,38 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
         </div>
 
         {showFaq && (
-          <div className="mb-4 grid gap-2 rounded-xl border border-line/80 bg-panel/50 p-3 text-xs text-mist sm:grid-cols-3">
-            <p>
-              <strong className="text-slate-200">Paper</strong> — practice desk,
-              not a live broker.
-            </p>
-            <p>
-              <strong className="text-slate-200">Chart</strong> — honest bars only;
-              no fake data.
-            </p>
-            <p>
-              <strong className="text-slate-200">Confirm</strong> — policy + you
-              approve every fill.
-            </p>
+          <div className="mb-4 space-y-3 rounded-xl border border-line/80 bg-panel/50 p-3 text-xs text-mist">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <p>
+                <strong className="text-slate-200">Paper</strong> — practice desk,
+                not a live broker.
+              </p>
+              <p>
+                <strong className="text-slate-200">Chart</strong> — honest bars only;
+                no fake data · source + age on chart.
+              </p>
+              <p>
+                <strong className="text-slate-200">Confirm</strong> — policy + you
+                approve every order.
+              </p>
+            </div>
+            <div className="border-t border-line/60 pt-3">
+              <p className="mb-1 font-semibold text-slate-200">How fills work (paper)</p>
+              <ul className="list-inside list-disc space-y-1">
+                <li>
+                  <strong className="text-slate-300">Aggressive</strong> — buy limit ≥
+                  last or sell ≤ last: instant PaperSim fill at last/mark after confirm.
+                </li>
+                <li>
+                  <strong className="text-slate-300">Passive</strong> — buy below last
+                  or sell above: sits in <em>Orders</em> as working until mark crosses,
+                  Day TIF ends, or you cancel.
+                </li>
+                <li>
+                  Not exchange matching. No Level 2. No invented prints.
+                </li>
+              </ul>
+            </div>
           </div>
         )}
 
@@ -573,7 +636,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
         )}
 
         {/* Account strip */}
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <div className="mb-1 grid grid-cols-2 gap-2 sm:grid-cols-5">
           <Stat label="Net liq" value={loading ? "…" : fmtMoney(equity)} />
           <Stat label="Cash" value={loading ? "…" : fmtMoney(cash)} />
           <Stat label="Buying power" value={loading ? "…" : fmtMoney(bp)} />
@@ -597,6 +660,9 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
             className="col-span-2 sm:col-span-1"
           />
         </div>
+        <p className="mb-4 font-mono text-[10px] text-mist">
+          Simulated paper account — not a broker · quotes may be delayed
+        </p>
 
         {/*
           Desktop: watchlist | chart+ticket | blotter
@@ -847,6 +913,10 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                     "Enter qty + limit"
                   )}
                 </p>
+                <p className="text-[11px] leading-snug text-mist">
+                  Aggressive limits fill at last/mark after confirm. Passiveive
+                  limits rest in Orders (paper — not exchange matching).
+                </p>
                 <button
                   type="submit"
                   disabled={busy}
@@ -935,44 +1005,111 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               )}
 
               {blotter === "orders" && (
-                <p className="py-6 text-center text-sm text-mist">
-                  Working orders arrive in Phase 3. v1 fills instantly after
-                  confirm (paper).
-                </p>
+                <>
+                  {workingOrders.length === 0 && recentTerminal.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-mist">
+                      No working paper orders. Passiveive limits (buy below last /
+                      sell above) rest here after confirm.
+                    </p>
+                  ) : (
+                    <ul className="max-h-80 space-y-2 overflow-y-auto">
+                      {workingOrders.map((o) => {
+                        const id = String(o.broker_order_id || o.id || "");
+                        return (
+                          <li
+                            key={id}
+                            className="rounded-lg border border-accent/30 bg-ink/40 px-3 py-2.5 font-mono text-[11px]"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <span className="rounded border border-accent/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-accent">
+                                  working
+                                </span>
+                                <span className="ml-2 font-bold text-white">
+                                  {String(o.side || "").toUpperCase()}{" "}
+                                  {String(o.qty || "")}{" "}
+                                  {String(o.symbol || "—")}
+                                </span>
+                                <div className="mt-1 text-mist">
+                                  Limit {fmtPx(String(o.limit_price ?? ""))} · Day
+                                  TIF · PAPER
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={cancelBusy === id}
+                                onClick={() => void onCancelWorking(o)}
+                                className="min-h-9 shrink-0 rounded-lg border border-bad/40 px-2 py-1 text-[10px] font-semibold text-bad hover:bg-bad/10 disabled:opacity-50"
+                              >
+                                {cancelBusy === id ? "…" : "Cancel"}
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                      {recentTerminal.slice(0, 8).map((o) => (
+                        <li
+                          key={String(o.broker_order_id || o.id)}
+                          className="rounded-lg border border-line/40 bg-ink/30 px-3 py-2 font-mono text-[11px] text-mist"
+                        >
+                          <span className="uppercase">
+                            {String(o.status)}
+                          </span>
+                          {" · "}
+                          {String(o.side || "")} {String(o.qty || "")}{" "}
+                          {String(o.symbol || "")}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-3 border-t border-line/50 pt-2 text-[10px] text-mist">
+                    Paper working book — fills when last/mark crosses your limit.
+                    Not exchange matching.
+                  </p>
+                </>
               )}
 
               {blotter === "fills" && (
                 <>
-                  {orders.length === 0 ? (
+                  {fillOrders.length === 0 ? (
                     <p className="py-6 text-center text-sm text-mist">
-                      No paper fills yet.
+                      No PaperSim fills yet.
                     </p>
                   ) : (
                     <ul className="max-h-72 space-y-2 overflow-y-auto">
-                      {[...orders]
-                        .reverse()
-                        .slice(0, 40)
-                        .map((o) => (
-                          <li
-                            key={String(o.id || o.client_order_id)}
-                            className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2 font-mono text-[11px] text-slate-300"
-                          >
-                            <span className="font-semibold text-good">
-                              {String(o.status || "filled")}
+                      {fillOrders.slice(0, 40).map((o) => (
+                        <li
+                          key={String(o.id || o.client_order_id)}
+                          className="rounded-lg border border-line/50 bg-ink/40 px-3 py-2 font-mono text-[11px] text-slate-300"
+                        >
+                          <span className="font-semibold text-good">
+                            filled
+                          </span>
+                          <span className="text-white">
+                            {" "}
+                            · {String(o.side || "").toUpperCase()}{" "}
+                            {String(o.qty || "")} {String(o.symbol || "")}
+                          </span>
+                          {o.filled_avg_price != null && (
+                            <span className="text-mist">
+                              {" "}
+                              @ {fmtPx(String(o.filled_avg_price))}
                             </span>
-                            {o.broker_order_id != null && (
-                              <span className="text-mist">
-                                {" "}
-                                · {String(o.broker_order_id).slice(0, 16)}
-                              </span>
-                            )}
-                            {o.created_at != null && (
-                              <div className="text-mist">
-                                {String(o.created_at).slice(0, 19)}
-                              </div>
-                            )}
-                          </li>
-                        ))}
+                          )}
+                          {o.fill_kind != null && (
+                            <span className="text-mist">
+                              {" "}
+                              · {String(o.fill_kind)}
+                            </span>
+                          )}
+                          <div className="text-[10px] text-mist">
+                            PaperSim · not a live broker
+                            {o.created_at != null
+                              ? ` · ${String(o.created_at).slice(0, 19)}`
+                              : ""}
+                          </div>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </>
@@ -987,14 +1124,25 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           proposal={proposal}
           onClose={(updated) => {
             setProposal(null);
-            if (
-              updated?.policy_status === "submitted" ||
-              updated?.policy_status === "filled"
-            ) {
-              const msg = `Paper fill: ${updated.side} ${updated.qty} ${updated.symbol} 🎯`;
-              setFlash(`${msg} — check Positions.`);
-              flashCelebrate(msg);
+            if (updated?.policy_status === "filled") {
+              const msg = `PaperSim fill: ${updated.side} ${updated.qty} ${updated.symbol}`;
+              setFlash(
+                `${msg} · not a live broker confirmation — check Fills / Positions.`
+              );
+              flashCelebrate(`${msg} 🎯`);
               setBlotter("fills");
+            } else if (updated?.policy_status === "working") {
+              const msg = `Working paper limit: ${updated.side} ${updated.qty} ${updated.symbol}`;
+              setFlash(
+                `${msg} · Day TIF · see Orders (not exchange matching).`
+              );
+              flashCelebrate("Working · PAPER");
+              setBlotter("orders");
+            } else if (updated?.policy_status === "submitted") {
+              setFlash(
+                `Paper order submitted: ${updated.side} ${updated.qty} ${updated.symbol}`
+              );
+              setBlotter("orders");
             }
             void refresh();
             void refreshQuotes();

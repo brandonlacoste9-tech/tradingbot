@@ -1,7 +1,7 @@
 # Trade floor Phase 3 — hybrid order lifecycle
 
 **Product:** IndieTrades · https://indietrades.com/trade  
-**Status:** **Owner-locked (C hybrid + freeze)** — implement when team confirms on GitHub  
+**Status:** **Shipped** — owner locked C hybrid + freeze  
 **Date:** 2026-07-18  
 **Team vote:** https://github.com/brandonlacoste9-tech/tradingbot/issues/1  
 **Depends on:** Phase 1 chrome + Phase 2 chart shipped (`9ae7e4e`, `cb9370c`)  
@@ -77,13 +77,13 @@ Preflight modal stays for `awaiting_confirm` only.
 
 ## 5. Phase 3 freeze — in scope
 
-- [ ] Working passive limits after confirm  
-- [ ] Cancel working order  
-- [ ] Statuses per §4 table  
-- [ ] Documented fill rules (ticket copy + “How fills work” tip/FAQ)  
-- [ ] **Day TIF only** (UI already shows Day; enforce expire/cancel rule)  
-- [ ] Orders tab real data (not Phase 3 placeholder)  
-- [ ] Loud **PAPER** on working banner / confirm success  
+- [x] Working passive limits after confirm  
+- [x] Cancel working order  
+- [x] Statuses per §4 table  
+- [x] Documented fill rules (ticket copy + “How fills work” tip/FAQ)  
+- [x] **Day TIF only** (UI already shows Day; enforce expire/cancel rule)  
+- [x] Orders tab real data (not Phase 3 placeholder)  
+- [x] Loud **PAPER** on working banner / confirm success  
 
 ### Out of Phase 3
 

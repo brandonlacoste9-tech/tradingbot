@@ -98,6 +98,10 @@ export default function PreflightModal({ proposal, onClose }: Props) {
             <p className="mt-1 text-sm text-slate-400">
               Policy passed. Nothing submits until you confirm.
             </p>
+            <p className="mt-1 text-xs text-mist">
+              PaperSim: aggressive → fill at last/mark · passive → working in
+              Orders. Not a live broker.
+            </p>
           </div>
           <div
             className={`rounded-lg px-3 py-1 font-mono text-sm ${

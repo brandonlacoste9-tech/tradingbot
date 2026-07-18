@@ -262,7 +262,36 @@ export function marketSession() {
 }
 
 export function listOrders() {
-  return req<{ orders: Record<string, unknown>[]; user_id?: string }>("/orders");
+  return req<{
+    orders: Record<string, unknown>[];
+    user_id?: string;
+    paper?: boolean;
+    fill_rules?: Record<string, string>;
+  }>("/orders");
+}
+
+export function cancelOrder(orderId: string) {
+  return req<{
+    ok: boolean;
+    order: Record<string, unknown>;
+    paper?: boolean;
+    note?: string;
+  }>(`/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function evaluateOrders() {
+  return req<{
+    ok: boolean;
+    changed: Record<string, unknown>[];
+    count: number;
+    fill_rules?: Record<string, string>;
+  }>("/orders/evaluate", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 export function paperReset(starting_cash: number = 100_000) {
