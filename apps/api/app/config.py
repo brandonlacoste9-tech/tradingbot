@@ -67,6 +67,15 @@ class Settings(BaseSettings):
     # Free-tier daily chat cap (enforced when plan=free)
     free_chat_per_day: int = 25
 
+    # PR4 — admin kill switch + LLM circuit breaker
+    admin_api_key: str = ""  # X-Admin-Key header; empty disables /admin/*
+    global_kill_switch: bool = False  # env bootstrap at process start
+    llm_breaker_failure_threshold: int = 5  # open after N failures in window
+    llm_breaker_window_seconds: int = 60
+    llm_breaker_cooldown_seconds: int = 120  # stay open then half-open probe
+    # When circuit is open: "demo" falls back to demo agent; "block" returns 503
+    llm_breaker_open_mode: str = "demo"
+
     # Comma-separated. Include Netlify + local dev. Override via CORS_ORIGINS env.
     cors_origins: str = (
         "http://localhost:3000,"

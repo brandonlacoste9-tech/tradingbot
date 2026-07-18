@@ -130,6 +130,13 @@ export function billingStatus() {
     user_id: string;
     plan: string;
     limits: { label?: string; chat_per_day?: number; price_cad?: number };
+    usage?: {
+      used: number;
+      limit: number;
+      remaining?: number;
+      allowed?: boolean;
+      plan?: string;
+    };
     stripe_configured: boolean;
     stripe_customer_id?: string | null;
     subscription_status?: string | null;
@@ -137,6 +144,11 @@ export function billingStatus() {
       string,
       { label: string; chat_per_day: number; price_cad: number }
     >;
+    service?: {
+      chat_blocked?: boolean;
+      block_reason?: string | null;
+      llm_circuit?: string;
+    };
   }>("/billing/status");
 }
 

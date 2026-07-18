@@ -67,6 +67,12 @@ export interface HealthInfo {
   auth_mode?: string;
   sim_tenants?: number;
   tenancy?: { tenant_count: number; backend: string };
+  postgres?: boolean;
+  stripe_configured?: boolean;
+  global_kill?: boolean;
+  llm_circuit?: string;
+  admin_api_configured?: boolean;
+  version?: string;
 }
 
 export interface ConnectionInfo {

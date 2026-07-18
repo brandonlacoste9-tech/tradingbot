@@ -1,4 +1,4 @@
-"""Plan limits for free vs pro (PR3). Quotas enforced lightly; PR4 hardens."""
+"""Plan limits for free vs pro (PR3/PR4)."""
 
 from __future__ import annotations
 

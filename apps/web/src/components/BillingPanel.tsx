@@ -12,8 +12,19 @@ type Status = {
   plan: string;
   stripe_configured: boolean;
   limits: { label?: string; chat_per_day?: number; price_cad?: number };
+  usage?: {
+    used: number;
+    limit: number;
+    remaining?: number;
+    allowed?: boolean;
+  };
   plans?: Record<string, { label: string; chat_per_day: number; price_cad: number }>;
   subscription_status?: string | null;
+  service?: {
+    chat_blocked?: boolean;
+    block_reason?: string | null;
+    llm_circuit?: string;
+  };
 };
 
 export default function BillingPanel() {
@@ -82,22 +93,46 @@ export default function BillingPanel() {
   const plan = status?.plan || "free";
   const freeLimit = status?.plans?.free?.chat_per_day ?? 25;
   const proPrice = status?.plans?.pro?.price_cad ?? 29;
+  const used = status?.usage?.used;
+  const limit = status?.usage?.limit ?? status?.limits?.chat_per_day;
+  const remaining = status?.usage?.remaining;
+  const chatBlocked = status?.service?.chat_blocked;
+  const circuit = status?.service?.llm_circuit;
 
   return (
     <div className="rounded-2xl border border-line bg-panel p-4">
-      <h3 className="mb-3 text-sm font-semibold text-white">Billing</h3>
+      <h3 className="mb-3 text-sm font-semibold text-white">Billing & usage</h3>
       {error && <p className="mb-2 text-xs text-bad">{error}</p>}
+      {chatBlocked && (
+        <p className="mb-2 rounded-lg border border-bad/40 bg-bad/10 px-2 py-1.5 text-xs text-bad">
+          Service paused
+          {status?.service?.block_reason
+            ? `: ${status.service.block_reason}`
+            : ""}
+        </p>
+      )}
+      {circuit && circuit !== "closed" && (
+        <p className="mb-2 rounded-lg border border-warn/40 bg-warn/10 px-2 py-1.5 text-xs text-warn">
+          LLM circuit: {circuit} (demo agent may run until provider recovers)
+        </p>
+      )}
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between">
           <dt className="text-slate-500">Plan</dt>
           <dd className="font-mono text-slate-100">{plan}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-slate-500">Chats / day</dt>
+          <dt className="text-slate-500">Used today</dt>
           <dd className="font-mono text-slate-100">
-            {status?.limits?.chat_per_day ?? "—"}
+            {used != null && limit != null ? `${used} / ${limit}` : "—"}
           </dd>
         </div>
+        {remaining != null && (
+          <div className="flex justify-between">
+            <dt className="text-slate-500">Remaining</dt>
+            <dd className="font-mono text-slate-100">{remaining}</dd>
+          </div>
+        )}
         <div className="flex justify-between">
           <dt className="text-slate-500">Stripe</dt>
           <dd className="font-mono text-slate-100">

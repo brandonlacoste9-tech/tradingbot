@@ -1,14 +1,16 @@
 """
-FastAPI app — multi-user paper desk (PR1 tenancy).
+FastAPI app — multi-user paper desk (PR1–PR4).
 
 LLM never submits orders. Confirm gate + TTL + policy re-check are mandatory.
 Default broker: per-user PaperSim. Optional: ibkr | alpaca via BROKER_BACKEND.
 Auth: AUTH_MODE=disabled (X-User-Id) or clerk (Bearer JWT).
+PR4: quotas snapshot, LLM circuit breaker, admin kill switch.
 """
 
 from __future__ import annotations
 
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Annotated, Any
@@ -18,10 +20,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from app.admin.controls import (
+    assert_admin_key,
+    get_controls_snapshot,
+    is_chat_blocked,
+    is_trading_blocked,
+    set_global_kill,
+    set_user_kill,
+)
+from app.admin.llm_breaker import get_llm_breaker, reset_llm_breaker
 from app.agent.loop import run_agent_turn_demo, run_agent_turn_llm
 from app.auth import CurrentUser, get_current_user
-from contextlib import asynccontextmanager
-
+from app.billing.plans import PLAN_LIMITS, normalize_plan
+from app.billing.stripe_svc import (
+    create_checkout_session,
+    create_portal_session,
+    plan_from_status,
+    stripe_configured,
+    user_id_from_subscription_obj,
+)
+from app.billing.usage import get_usage_snapshot, record_chat_and_check
 from app.brokers import BrokerError, get_broker
 from app.brokers.factory import get_broker_async, sim_tenant_count
 from app.config import get_settings
@@ -34,17 +52,9 @@ from app.policy.engine import (
     is_proposal_expired,
 )
 from app.store import MemoryStore, TradeProposal, new_id
-from app.billing.plans import PLAN_LIMITS, normalize_plan
-from app.billing.stripe_svc import (
-    create_checkout_session,
-    create_portal_session,
-    plan_from_status,
-    stripe_configured,
-    user_id_from_subscription_obj,
-)
-from app.billing.usage import record_chat_and_check
 from app.tenancy import get_tenant_store
 from app.tools.web_search import web_search
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -55,8 +65,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 multi-user paper desk + Stripe billing (PR3)",
-    version="0.5.0",
+    description="L2 multi-user paper desk + billing + admin controls (PR4)",
+    version="0.6.0",
     lifespan=lifespan,
 )
 
@@ -99,6 +109,12 @@ class DevSetPlanRequest(BaseModel):
     plan: str = Field(description="free | pro | pro_plus")
 
 
+class KillSwitchRequest(BaseModel):
+    enabled: bool
+    reason: str = ""
+    user_id: str | None = None  # if set, per-user kill; else global
+
+
 # ---------- helpers ----------
 
 
@@ -106,14 +122,15 @@ def _ttl() -> int:
     return settings.confirm_ttl_seconds
 
 
-def _risk_limits() -> RiskLimits:
+def _risk_limits(user_id: str | None = None) -> RiskLimits:
+    blocked, _ = is_trading_blocked(user_id)
     return RiskLimits(
         max_position_pct=settings.default_max_position_pct,
         max_daily_loss_pct=settings.default_max_daily_loss_pct,
         max_open_positions=settings.default_max_open_positions,
         allowed_order_types=("limit",),
         blacklisted_symbols=(),
-        kill_switch=False,
+        kill_switch=blocked,
         paper_only=settings.paper_only,
         allow_market_orders=False,
     )
@@ -223,7 +240,7 @@ async def _create_proposal_from_args(
             {"error": str(e)},
         )
 
-    decision = evaluate_proposal(intent, ctx, _risk_limits())
+    decision = evaluate_proposal(intent, ctx, _risk_limits(user_id))
     client_order_id = f"atb-{uuid.uuid4().hex[:24]}"
     expires = datetime.now(timezone.utc) + timedelta(seconds=_ttl())
 
@@ -404,6 +421,8 @@ def _llm_ready() -> tuple[bool, str, str | None]:
 async def health():
     client = _client("health")
     llm_on, provider, _ = _llm_ready()
+    controls = get_controls_snapshot()
+    breaker = get_llm_breaker().snapshot()
     return {
         "ok": True,
         "paper_only": settings.paper_only,
@@ -416,6 +435,10 @@ async def health():
         "sim_tenants": sim_tenant_count(),
         "postgres": is_db_available(),
         "stripe_configured": stripe_configured(),
+        "global_kill": controls["global_kill"],
+        "llm_circuit": breaker["state"],
+        "admin_api_configured": bool((settings.admin_api_key or "").strip()),
+        "version": "0.6.0",
     }
 
 
@@ -440,14 +463,23 @@ async def me(user: Annotated[CurrentUser, Depends(get_current_user)]):
 async def billing_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
     profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
     plan = normalize_plan(profile.get("plan"))
+    usage = await get_usage_snapshot(user.id, plan)
+    blocked, block_reason = is_chat_blocked(user.id)
+    breaker = get_llm_breaker().snapshot()
     return {
         "user_id": user.id,
         "plan": plan,
         "limits": PLAN_LIMITS.get(plan, PLAN_LIMITS["free"]),
+        "usage": usage,
         "stripe_configured": stripe_configured(),
         "stripe_customer_id": profile.get("stripe_customer_id"),
         "subscription_status": profile.get("subscription_status"),
         "plans": PLAN_LIMITS,
+        "service": {
+            "chat_blocked": blocked,
+            "block_reason": block_reason or None,
+            "llm_circuit": breaker["state"],
+        },
     }
 
 
@@ -650,9 +682,15 @@ async def agent_chat(
     """
     Chat → agent plan → tools via _execute_tool (propose → policy only).
     Scoped to authenticated user. Never submits orders here.
+    PR4: kill switch, quota, LLM circuit breaker.
     """
     mem = await _mem(user)
     profile = await get_tenant_store().ensure_user_async(user.id, email=user.email)
+
+    blocked, block_reason = is_chat_blocked(user.id)
+    if blocked:
+        raise HTTPException(503, f"Service paused: {block_reason}")
+
     usage = await record_chat_and_check(user.id, profile.get("plan"))
     if not usage["allowed"]:
         raise HTTPException(
@@ -675,7 +713,23 @@ async def agent_chat(
 
     plan: dict[str, Any]
     llm_on, provider, api_key = _llm_ready()
-    if llm_on and api_key:
+    breaker = get_llm_breaker()
+    allow_llm, breaker_reason = breaker.allow_request()
+    open_mode = (get_settings().llm_breaker_open_mode or "demo").lower().strip()
+
+    if llm_on and api_key and not allow_llm:
+        if open_mode == "block":
+            raise HTTPException(503, breaker_reason)
+        mem.audit_event(
+            "system",
+            "llm_circuit_open",
+            {"reason": breaker_reason, "provider": provider},
+        )
+        plan = run_agent_turn_demo(body.message)
+        plan["fallback_from_llm"] = True
+        plan["llm_error"] = breaker_reason
+        plan["llm_circuit"] = "open"
+    elif llm_on and api_key:
         try:
             plan = await run_agent_turn_llm(
                 body.message,
@@ -685,7 +739,9 @@ async def agent_chat(
                 model=settings.llm_model or None,
                 base_url=settings.llm_base_url or None,
             )
+            breaker.record_success()
         except Exception as e:  # noqa: BLE001
+            breaker.record_failure(str(e))
             mem.audit_event(
                 "system",
                 "llm_fallback_demo",
@@ -741,9 +797,15 @@ async def agent_chat(
         "model": plan.get("model"),
         "provider": plan.get("provider"),
         "llm_enabled": llm_on,
+        "llm_circuit": get_llm_breaker().snapshot()["state"],
         "user_id": user.id,
         "plan": usage["plan"],
-        "usage": {"used": usage["used"], "limit": usage["limit"]},
+        "usage": {
+            "used": usage["used"],
+            "limit": usage["limit"],
+            "remaining": usage.get("remaining"),
+            "plan": usage["plan"],
+        },
     }
 
 
@@ -777,6 +839,10 @@ async def confirm_proposal(
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
     """Human confirm gate — tenant-scoped."""
+    blocked, block_reason = is_trading_blocked(user.id)
+    if blocked:
+        raise HTTPException(503, f"Trading paused: {block_reason}")
+
     mem = await _mem(user)
     p = mem.get_proposal(body.proposal_id)
     if not p:
@@ -826,7 +892,7 @@ async def confirm_proposal(
             now=datetime.now(timezone.utc),
         )
 
-    decision = evaluate_proposal(intent, ctx, _risk_limits())
+    decision = evaluate_proposal(intent, ctx, _risk_limits(user.id))
     ts = get_tenant_store()
     if not decision.allowed:
         p.policy_status = "policy_rejected"
@@ -990,3 +1056,67 @@ async def portfolio(user: Annotated[CurrentUser, Depends(get_current_user)]):
             "error": str(e),
             "user_id": user.id,
         }
+
+
+# ---------- admin (PR4) — X-Admin-Key ----------
+
+
+@app.get("/admin/status")
+async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
+    """Kill switch + LLM circuit + process flags (no secrets)."""
+    return {
+        "controls": get_controls_snapshot(),
+        "llm_breaker": get_llm_breaker().snapshot(),
+        "postgres": is_db_available(),
+        "stripe_configured": stripe_configured(),
+        "auth_mode": settings.auth_mode,
+        "broker_backend": settings.broker_backend,
+        "llm_provider": settings.llm_provider,
+        "version": "0.6.0",
+    }
+
+
+@app.post("/admin/kill-switch")
+async def admin_kill_switch(
+    body: KillSwitchRequest,
+    _: Annotated[None, Depends(assert_admin_key)],
+):
+    """
+    Toggle global or per-user kill switch.
+    Global: pause chat + trading for everyone.
+    user_id set: pause that tenant only.
+    """
+    if body.user_id:
+        result = set_user_kill(body.user_id, body.enabled, reason=body.reason)
+    else:
+        result = set_global_kill(body.enabled, reason=body.reason)
+    return {"ok": True, **result, "controls": get_controls_snapshot()}
+
+
+@app.post("/admin/llm-breaker/reset")
+async def admin_llm_breaker_reset(
+    _: Annotated[None, Depends(assert_admin_key)],
+):
+    """Force-close the LLM circuit breaker."""
+    snap = reset_llm_breaker()
+    return {"ok": True, "llm_breaker": snap}
+
+
+@app.get("/admin/usage/{user_id}")
+async def admin_usage(
+    user_id: str,
+    _: Annotated[None, Depends(assert_admin_key)],
+):
+    """Read-only chat usage for a tenant."""
+    store = get_tenant_store()
+    profile = await store.ensure_user_async(user_id)
+    plan = normalize_plan(profile.get("plan"))
+    usage = await get_usage_snapshot(user_id, plan)
+    blocked, reason = is_chat_blocked(user_id)
+    return {
+        "user_id": user_id,
+        "plan": plan,
+        "usage": usage,
+        "chat_blocked": blocked,
+        "block_reason": reason or None,
+    }

@@ -125,10 +125,11 @@ LLM never submits. Policy never skipped for paid users either.
 - Gating: free tier message cap vs Pro  
 - Customer portal (cancel/upgrade)  
 
-### PR4 — Quotas + cost protection
-- Daily chat limit free vs paid  
+### PR4 — Quotas + cost protection ✅
+- Daily chat limit free vs paid + usage snapshot in billing UI  
 - Circuit breaker if xAI errors/spend spike  
-- Admin kill switch  
+- Admin kill switch (`docs/PR4_QUOTAS_KILL_SWITCH.md`)  
+
 
 ### PR5 — Product polish
 - Onboarding (risk persona, disclaimer accept)  
