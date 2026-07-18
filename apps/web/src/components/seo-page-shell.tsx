@@ -44,7 +44,7 @@ export function SeoPageShell({
                 Trade floor
               </Link>
               <Link
-                href="/"
+                href="/desk"
                 className="rounded-full border border-line px-3 py-1 text-slate-300 hover:border-accent/40"
               >
                 AI Desk
@@ -72,7 +72,7 @@ export function SeoCta({
   primary = "Open paper Trade floor",
   primaryHref = "/trade",
   secondary = "AI Desk",
-  secondaryHref = "/",
+  secondaryHref = "/desk",
 }: {
   primary?: string;
   primaryHref?: string;

@@ -64,7 +64,7 @@ export default function AiPaperTradingPage() {
         control plane — Grok can dig and propose; code decides policy; you
         confirm; PaperSim fills.
       </p>
-      <SeoCta primary="Try AI Desk" primaryHref="/" secondary="Trade floor" secondaryHref="/trade" />
+      <SeoCta primary="Try AI Desk" primaryHref="/desk" secondary="Trade floor" secondaryHref="/trade" />
 
       <section className="mt-12 space-y-3">
         <h2 className="text-xl font-semibold text-white">The control plane</h2>

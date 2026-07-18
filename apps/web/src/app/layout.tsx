@@ -125,7 +125,7 @@ function AuthChrome() {
             href="/"
             className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
           >
-            AI Desk
+            Home
           </a>
           <a
             href="/trade"
@@ -134,16 +134,16 @@ function AuthChrome() {
             Trade
           </a>
           <a
+            href="/desk"
+            className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
+          >
+            AI Desk
+          </a>
+          <a
             href="/plans"
             className="rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white sm:px-3 sm:text-sm"
           >
             Plans
-          </a>
-          <a
-            href="/paper-trading"
-            className="hidden rounded-full px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:text-white md:inline sm:px-3 sm:text-sm"
-          >
-            Learn
           </a>
         </nav>
       </div>

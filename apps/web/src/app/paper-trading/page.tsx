@@ -93,7 +93,7 @@ export default function PaperTradingPage() {
           Trade floor
         </Link>{" "}
         for tickets, or the{" "}
-        <Link href="/" className="text-accent hover:underline">
+        <Link href="/desk" className="text-accent hover:underline">
           AI Desk
         </Link>{" "}
         when you want Grok to research first.

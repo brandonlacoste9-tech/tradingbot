@@ -55,7 +55,7 @@ export default function AiTradingDeskPage() {
       <div className="mt-8 grid gap-3 sm:grid-cols-3">
         {[
           {
-            href: "/",
+            href: "/desk",
             t: "AI Desk",
             d: "Research with Grok. Proposals need your confirm.",
           },

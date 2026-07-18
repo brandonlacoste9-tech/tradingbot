@@ -8,6 +8,7 @@ const PATHS: {
 }[] = [
   { path: "", changeFrequency: "weekly", priority: 1 },
   { path: "/trade", changeFrequency: "weekly", priority: 0.95 },
+  { path: "/desk", changeFrequency: "weekly", priority: 0.92 },
   { path: "/plans", changeFrequency: "monthly", priority: 0.85 },
   { path: "/paper-trading", changeFrequency: "weekly", priority: 0.9 },
   { path: "/ai-paper-trading", changeFrequency: "weekly", priority: 0.9 },

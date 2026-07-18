@@ -123,7 +123,7 @@ export default function PlansPage() {
             . Upgrade only when you need higher daily chat limits.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/" className="hud-btn">
+            <Link href="/desk" className="hud-btn">
               ← Back to desk
             </Link>
             <a href="#compare" className="hud-btn">
@@ -165,7 +165,7 @@ export default function PlansPage() {
             </ul>
             <div className="mt-6 border-t border-line/70 pt-5">
               <Link
-                href="/"
+                href="/desk"
                 className="inline-flex w-full items-center justify-center rounded-xl border border-line px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-accent/40 hover:text-white"
               >
                 Open free desk
@@ -381,7 +381,7 @@ export default function PlansPage() {
               />
             </div>
             <Link
-              href="/"
+              href="/desk"
               className="text-center text-xs text-accent hover:underline sm:text-right"
             >
               Or open the desk without upgrading →

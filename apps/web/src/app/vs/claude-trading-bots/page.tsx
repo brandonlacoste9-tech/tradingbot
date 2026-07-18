@@ -90,7 +90,7 @@ export default function VsClaudeBotsPage() {
         <strong className="text-slate-200">LLM never submits</strong>,{" "}
         <strong className="text-slate-200">you confirm</strong>.
       </p>
-      <SeoCta primary="Open AI Desk" primaryHref="/" secondary="Trade floor" secondaryHref="/trade" />
+      <SeoCta primary="Open AI Desk" primaryHref="/desk" secondary="Trade floor" secondaryHref="/trade" />
 
       <div className="mt-12 overflow-x-auto rounded-2xl border border-line">
         <table className="w-full min-w-[560px] text-left text-sm">

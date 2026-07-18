@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/", label: "AI Desk", match: (p: string) => p === "/" },
+  { href: "/", label: "Home", match: (p: string) => p === "/" },
   {
     href: "/trade",
     label: "Trade",
@@ -11,9 +11,9 @@ const TABS = [
     primary: true,
   },
   {
-    href: "/plans",
-    label: "Plans",
-    match: (p: string) => p.startsWith("/plans"),
+    href: "/desk",
+    label: "Desk",
+    match: (p: string) => p.startsWith("/desk"),
   },
 ] as const;
 
@@ -55,7 +55,11 @@ export default function MobileBottomNav() {
                   }`}
                   aria-hidden
                 >
-                  {tab.label === "AI Desk" ? "💬" : tab.label === "Trade" ? "📈" : "💎"}
+                  {tab.label === "Home"
+                    ? "🏠"
+                    : tab.label === "Trade"
+                      ? "📈"
+                      : "💬"}
                 </span>
                 <span className="text-[10px] font-semibold tracking-wide">
                   {tab.label}

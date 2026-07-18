@@ -14,7 +14,8 @@ Control plane (non-negotiable): research → deterministic policy → human conf
 
 ## Primary URLs
 
-- Homepage / AI Desk: ${site}/
+- Homepage (marketing): ${site}/
+- AI Desk: ${site}/desk
 - Paper trading floor: ${site}/trade
 - Plans: ${site}/plans
 - Paper trading guide: ${site}/paper-trading
