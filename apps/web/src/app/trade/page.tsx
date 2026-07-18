@@ -30,7 +30,11 @@ const clerkEnabled = Boolean(
 const DEFAULT_WATCH = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META"];
 const QUICK_QTY = ["1", "5", "10", "25", "100"];
 const WATCH_STORAGE_KEY = "indietrades.watchlist.v1";
+const BUDGET_STORAGE_KEY = "indietrades.paper_budget.v1";
 const WATCH_MAX = 16;
+const BUDGET_PRESETS = [10_000, 20_000, 50_000, 100_000] as const;
+const BUDGET_MIN = 1_000;
+const BUDGET_MAX = 10_000_000;
 
 const GREEN = "#22c55e";
 const RED = "#ef4444";
@@ -178,6 +182,9 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
+  const [showBudget, setShowBudget] = useState(false);
+  const [budgetPick, setBudgetPick] = useState<number | "custom">(100_000);
+  const [budgetCustom, setBudgetCustom] = useState("20000");
   const [proposal, setProposal] = useState<TradeProposal | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [showFaq, setShowFaq] = useState(false);
@@ -209,10 +216,26 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     window.setTimeout(() => setCelebrate(null), ms);
   }, []);
 
-  // Hydrate watchlist from localStorage once (any ticker the user added sticks)
+  // Hydrate watchlist + last paper budget preference
   useEffect(() => {
     setWatch(loadWatchlist());
     setWatchHydrated(true);
+    try {
+      const raw = localStorage.getItem(BUDGET_STORAGE_KEY);
+      if (raw) {
+        const n = Number(raw);
+        if (Number.isFinite(n) && n >= BUDGET_MIN && n <= BUDGET_MAX) {
+          if ((BUDGET_PRESETS as readonly number[]).includes(n)) {
+            setBudgetPick(n);
+          } else {
+            setBudgetPick("custom");
+            setBudgetCustom(String(Math.round(n)));
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -480,24 +503,48 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
     }
   }
 
-  async function onReset() {
-    if (
-      !confirm(
-        "Reset paper book to $100,000 virtual cash?\n\nPositions clear. This is NOT real money."
-      )
-    ) {
+  function resolveBudgetAmount(): number | null {
+    if (budgetPick === "custom") {
+      const n = Number(String(budgetCustom).replace(/[$,\s]/g, ""));
+      if (!Number.isFinite(n)) return null;
+      return Math.round(n);
+    }
+    return budgetPick;
+  }
+
+  async function onConfirmBudget() {
+    const cash = resolveBudgetAmount();
+    if (cash == null || cash < BUDGET_MIN || cash > BUDGET_MAX) {
+      setError(
+        `Paper budget must be between $${BUDGET_MIN.toLocaleString()} and $${BUDGET_MAX.toLocaleString()}`
+      );
       return;
     }
     setResetBusy(true);
     setError(null);
     try {
-      const res = await paperReset(100_000);
-      setFlash(res.message || "Paper book reset. Fresh $100k.");
-      flashCelebrate("🎉 Fresh paper book");
+      const res = await paperReset(cash);
+      try {
+        localStorage.setItem(BUDGET_STORAGE_KEY, String(cash));
+      } catch {
+        /* ignore */
+      }
+      const label = cash.toLocaleString(undefined, {
+        style: "currency",
+        currency: "USD",
+        maximumFractionDigits: 0,
+      });
+      setFlash(
+        res.message ||
+          `Paper book reset to ${label} virtual cash. Not a deposit.`
+      );
+      flashCelebrate(`🎉 Paper budget ${label}`);
+      setShowBudget(false);
+      setBlotter("positions");
       await refresh();
       await refreshQuotes();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Reset failed");
+      setError(e instanceof Error ? e.message : "Budget reset failed");
     } finally {
       setResetBusy(false);
     }
@@ -581,10 +628,10 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <button
             type="button"
             disabled={resetBusy}
-            onClick={() => void onReset()}
+            onClick={() => setShowBudget(true)}
             className="min-h-10 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn disabled:opacity-50"
           >
-            {resetBusy ? "Resetting…" : "Reset $100k"}
+            Paper budget
           </button>
         </div>
 
@@ -605,6 +652,12 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               </p>
             </div>
             <div className="border-t border-line/60 pt-3">
+              <p className="mb-1 font-semibold text-slate-200">Paper budget</p>
+              <p className="mb-3">
+                Use <strong className="text-slate-300">Paper budget</strong> to
+                practice with $10k / $20k / $50k / $100k (or custom). Resets the
+                virtual book — not a real deposit.
+              </p>
               <p className="mb-1 font-semibold text-slate-200">How fills work (paper)</p>
               <ul className="list-inside list-disc space-y-1">
                 <li>
@@ -1118,6 +1171,123 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           </section>
         </div>
       </div>
+
+      {showBudget && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="budget-title"
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-t-2xl border border-line bg-panel shadow-2xl sm:rounded-2xl"
+            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+          >
+            <div className="border-b border-line px-5 py-4">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-good">
+                Simulated · not a deposit
+              </p>
+              <h2
+                id="budget-title"
+                className="mt-1 text-lg font-bold text-white"
+              >
+                Paper budget
+              </h2>
+              <p className="mt-1 text-sm text-mist">
+                Choose virtual starting cash. Resets positions and working
+                orders. Not real money. Not a broker transfer.
+              </p>
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              <p className="font-mono text-3xl font-bold tabular-nums text-white">
+                {(() => {
+                  const a = resolveBudgetAmount();
+                  if (a == null || !Number.isFinite(a)) return "—";
+                  return a.toLocaleString(undefined, {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 0,
+                  });
+                })()}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {BUDGET_PRESETS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setBudgetPick(n)}
+                    className={`min-h-10 rounded-full px-3.5 py-2 font-mono text-xs font-semibold transition ${
+                      budgetPick === n
+                        ? "bg-good text-ink"
+                        : "border border-line text-mist hover:text-white"
+                    }`}
+                  >
+                    ${(n / 1000).toFixed(0)}k
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setBudgetPick("custom")}
+                  className={`min-h-10 rounded-full px-3.5 py-2 font-mono text-xs font-semibold transition ${
+                    budgetPick === "custom"
+                      ? "bg-good text-ink"
+                      : "border border-line text-mist hover:text-white"
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+              {budgetPick === "custom" && (
+                <label className="block">
+                  <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
+                    Custom amount (USD)
+                  </span>
+                  <input
+                    value={budgetCustom}
+                    onChange={(e) => setBudgetCustom(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="20000"
+                    className="hud-input w-full rounded-xl px-3 py-3 font-mono text-lg"
+                    autoFocus
+                  />
+                  <span className="mt-1 block font-mono text-[10px] text-mist">
+                    Min ${BUDGET_MIN.toLocaleString()} · max $
+                    {BUDGET_MAX.toLocaleString()}
+                  </span>
+                </label>
+              )}
+              <p className="rounded-xl border border-warn/30 bg-warn/5 px-3 py-2 text-xs leading-relaxed text-mist">
+                This wipes your paper book (positions, working orders) and
+                restarts day P&amp;L vs the new starting cash.
+              </p>
+            </div>
+            <div className="flex gap-2 border-t border-line px-5 py-4">
+              <button
+                type="button"
+                disabled={resetBusy}
+                onClick={() => setShowBudget(false)}
+                className="min-h-11 flex-1 rounded-xl border border-line px-4 text-sm font-medium text-mist hover:text-white disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={resetBusy}
+                onClick={() => void onConfirmBudget()}
+                className="min-h-11 flex-[1.4] rounded-xl bg-good px-4 text-sm font-bold text-ink disabled:opacity-50"
+              >
+                {resetBusy
+                  ? "Resetting…"
+                  : `Reset paper book${
+                      resolveBudgetAmount() != null
+                        ? ` to $${Math.round(resolveBudgetAmount()!).toLocaleString()}`
+                        : ""
+                    }`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {proposal && (
         <PreflightModal
