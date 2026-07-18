@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
     alpaca_data_url: str = "https://data.alpaca.markets"
 
+    # Massive.com market data (Polygon-compatible REST). Research + PaperSim marks.
+    # NOT a broker. Separate from ADMIN_API_KEY.
+    massive_api_key: str = ""
+    massive_base_url: str = "https://api.polygon.io"
+
     ibkr_host: str = "127.0.0.1"
     ibkr_port: int = 4002
     ibkr_client_id: int = 1

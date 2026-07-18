@@ -95,6 +95,12 @@ class PaperSimBroker:
             self._marks[s] = Decimal("100.00") + Decimal(len(s) % 20)
         return self._marks[s]
 
+    def set_mark(self, symbol: str, price: Decimal | float | str) -> None:
+        """Update mark from external market data (e.g. Massive prev close)."""
+        s = symbol.upper()
+        with self._lock:
+            self._marks[s] = Decimal(str(price))
+
     def _equity(self) -> Decimal:
         eq = self._cash
         for sym, pos in self._positions.items():

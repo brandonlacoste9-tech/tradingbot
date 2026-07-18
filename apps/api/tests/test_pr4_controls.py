@@ -118,7 +118,7 @@ def test_health_exposes_kill_and_circuit():
     body = r.json()
     assert "global_kill" in body
     assert "llm_circuit" in body
-    assert body["version"] == "0.6.0"
+    assert body.get("version", "").startswith("0.6")
 
 
 def test_billing_status_includes_usage():

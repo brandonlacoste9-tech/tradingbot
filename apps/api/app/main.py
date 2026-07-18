@@ -44,6 +44,14 @@ from app.brokers import BrokerError, get_broker
 from app.brokers.factory import get_broker_async, sim_tenant_count
 from app.config import get_settings
 from app.db.pool import close_pool, init_pool, is_db_available
+from app.marketdata import (
+    get_bars as massive_get_bars,
+    get_market_status as massive_market_status,
+    get_news as massive_get_news,
+    get_quote as massive_get_quote,
+    is_massive_configured,
+    massive_status,
+)
 from app.policy.engine import (
     PolicyContext,
     RiskLimits,
@@ -65,8 +73,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="AI Trading Bot API",
-    description="L2 multi-user paper desk + billing + admin controls (PR4)",
-    version="0.6.0",
+    description="L2 multi-user paper desk + Massive market data + admin (PR4)",
+    version="0.6.1",
     lifespan=lifespan,
 )
 
@@ -171,6 +179,21 @@ async def _build_policy_context(client, symbol: str) -> PolicyContext:
 
 
 async def _latest_price(client, symbol: str) -> Decimal | None:
+    """Prefer Massive prev close when configured; else broker quote."""
+    if is_massive_configured():
+        try:
+            q = await massive_get_quote(symbol)
+            px = q.get("close") or q.get("price")
+            if px is not None:
+                dec = Decimal(str(px))
+                if hasattr(client, "set_mark"):
+                    try:
+                        client.set_mark(symbol, dec)
+                    except Exception:  # noqa: BLE001
+                        pass
+                return dec
+        except Exception:  # noqa: BLE001
+            pass
     try:
         trade = await client.get_latest_trade(symbol)
         t = trade.get("trade") or trade
@@ -178,6 +201,8 @@ async def _latest_price(client, symbol: str) -> Decimal | None:
             return Decimal(str(t["p"]))
         if "price" in t:
             return Decimal(str(t["price"]))
+        if trade.get("price") is not None:
+            return Decimal(str(trade["price"]))
     except BrokerError:
         return None
     return None
@@ -332,9 +357,38 @@ async def _execute_tool(
         return await client.get_positions()
 
     if tool == "get_quote":
+        if is_massive_configured():
+            try:
+                q = await massive_get_quote(args["symbol"])
+                if hasattr(client, "set_mark") and q.get("close") is not None:
+                    client.set_mark(args["symbol"], q["close"])
+                return q
+            except Exception as e:  # noqa: BLE001
+                fallback = await client.get_latest_trade(args["symbol"])
+                if isinstance(fallback, dict):
+                    fallback["massive_error"] = str(e)
+                return fallback
         return await client.get_latest_trade(args["symbol"])
 
     if tool == "get_bars":
+        if is_massive_configured():
+            try:
+                bars = await massive_get_bars(
+                    args["symbol"],
+                    timeframe=args.get("timeframe") or "1Day",
+                    limit=int(args.get("limit") or 60),
+                )
+                if bars.get("bars"):
+                    return bars
+            except Exception as e:  # noqa: BLE001
+                out = await client.get_bars(
+                    args["symbol"],
+                    timeframe=args.get("timeframe") or "1Day",
+                    limit=int(args.get("limit") or 60),
+                )
+                if isinstance(out, dict):
+                    out["massive_error"] = str(e)
+                return out
         return await client.get_bars(
             args["symbol"],
             timeframe=args.get("timeframe") or "1Day",
@@ -342,6 +396,18 @@ async def _execute_tool(
         )
 
     if tool == "get_news":
+        if is_massive_configured():
+            try:
+                return await massive_get_news(
+                    args["symbol"], limit=int(args.get("limit") or 5)
+                )
+            except Exception as e:  # noqa: BLE001
+                out = await client.get_news(
+                    args["symbol"], limit=int(args.get("limit") or 5)
+                )
+                if isinstance(out, dict):
+                    out["massive_error"] = str(e)
+                return out
         return await client.get_news(args["symbol"], limit=int(args.get("limit") or 5))
 
     if tool == "web_search":
@@ -438,7 +504,9 @@ async def health():
         "global_kill": controls["global_kill"],
         "llm_circuit": breaker["state"],
         "admin_api_configured": bool((settings.admin_api_key or "").strip()),
-        "version": "0.6.0",
+        "massive_configured": is_massive_configured(),
+        "market_data": massive_status(),
+        "version": "0.6.1",
     }
 
 
@@ -625,6 +693,19 @@ async def billing_webhook(request: Request):
     return JSONResponse({"received": True, "type": etype, "user_id": user_id, "plan": plan})
 
 
+@app.get("/market/status")
+async def market_data_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
+    """Massive market-data health (not a broker)."""
+    base = {**massive_status(), "user_id": user.id}
+    if not is_massive_configured():
+        return {**base, "ok": False, "note": "Set MASSIVE_API_KEY on the API"}
+    try:
+        status = await massive_market_status()
+        return {"ok": True, **base, "exchange_status": status}
+    except Exception as e:  # noqa: BLE001
+        return {"ok": False, **base, "error": str(e)}
+
+
 @app.get("/broker/status")
 async def broker_status(user: Annotated[CurrentUser, Depends(get_current_user)]):
     """Diagnostics for sim/ibkr/alpaca — no orders placed."""
@@ -633,6 +714,7 @@ async def broker_status(user: Annotated[CurrentUser, Depends(get_current_user)])
         "broker_backend": getattr(client, "backend_name", settings.broker_backend),
         "paper_only": settings.paper_only,
         "user_id": user.id,
+        "massive_configured": is_massive_configured(),
     }
     if hasattr(client, "status_report"):
         try:
@@ -1072,7 +1154,8 @@ async def admin_status(_: Annotated[None, Depends(assert_admin_key)]):
         "auth_mode": settings.auth_mode,
         "broker_backend": settings.broker_backend,
         "llm_provider": settings.llm_provider,
-        "version": "0.6.0",
+        "massive": massive_status(),
+        "version": "0.6.1",
     }
 
 
