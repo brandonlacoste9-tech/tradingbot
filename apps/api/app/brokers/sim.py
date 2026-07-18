@@ -317,19 +317,29 @@ class PaperSimBroker:
             self._orders_by_client[client_order_id] = order
             self._orders_by_id[oid] = order
 
+        # When Postgres is up, write failures surface (no silent drop of fills).
         await self._persist()
         return order
 
+    async def persist(self) -> None:
+        """Public flush for reset / admin paths."""
+        await self._persist()
+
     async def _persist(self) -> None:
+        """
+        Flush paper book to Postgres when available.
+        - No user_id / DB down: memory-only (local/dev)
+        - DB up but write fails: raise BrokerError so the API can 502
+        """
         if not self.user_id:
             return
-        try:
-            from app.db.pool import is_db_available
-            from app.db.repo import save_paper_state
+        from app.db.pool import is_db_available
+        from app.db.repo import save_paper_state
 
-            if not is_db_available():
-                return
-            st = self.export_state()
+        if not is_db_available():
+            return
+        st = self.export_state()
+        try:
             await save_paper_state(
                 self.user_id,
                 cash=st["cash"],
@@ -338,8 +348,8 @@ class PaperSimBroker:
                 marks=st["marks"],
                 client_orders=st["client_orders"],
             )
-        except Exception:  # noqa: BLE001
-            pass  # memory remains source of truth if DB write fails
+        except Exception as e:  # noqa: BLE001
+            raise BrokerError(f"Failed to persist paper book: {e}") from e
 
     async def cancel_order(self, broker_order_id: str) -> Any:
         with self._lock:

@@ -189,3 +189,21 @@ Expect: `stripe_configured: true`, `plan` matching subscription after checkout.
 4. Then traffic  
 
 Control plane stays sacred. No live multi-tenant brokerage in this pass.
+
+---
+
+## Post-deploy smoke (quick)
+
+```bash
+curl -s https://tradingbot-api-0990.onrender.com/health
+# slim: ok, auth_mode=clerk, broker_backend=sim, paper_only, postgres, llm
+
+# CORS: Origin must be listed in CORS_ORIGINS (not only regex)
+# Browser: Trade floor loads quotes without CORS errors
+```
+
+API hardening (v0.7.x+):
+
+- Quote rate limit: **60 req / 60s / user** on `/market/quote` and `/market/quotes`
+- List pagination: `?limit=&offset=` on `/journal`, `/orders`, `/proposals`, `/audit`
+- Paper persist: Postgres write failures raise (no silent drop of fills when DB is up)

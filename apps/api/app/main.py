@@ -48,6 +48,12 @@ from app.brokers import BrokerError, get_broker
 from app.brokers.factory import get_broker_async, sim_tenant_count
 from app.config import get_settings
 from app.db.pool import close_pool, init_pool, is_db_available
+from app.pagination import page_slice
+from app.rate_limit import (
+    MARKET_QUOTE_LIMIT,
+    MARKET_QUOTE_WINDOW,
+    market_quote_limiter,
+)
 from app.integrations.plaid_svc import (
     create_link_token,
     is_plaid_ready,
@@ -825,21 +831,25 @@ async def market_data_status(user: Annotated[CurrentUser, Depends(get_current_us
         }
 
 
-@app.get("/market/quote")
-async def market_quote(
-    symbol: str,
-    user: Annotated[CurrentUser, Depends(get_current_user)],
-):
-    """
-    Quote for trading desk watchlist / ticket.
-    Prefers live market data; falls back to PaperSim mark.
-    Updates sim mark when a live price is available (paper book stays in sync).
-    """
+def _rate_limit_quotes(user_id: str) -> None:
+    key = f"mq:{user_id}"
+    if not market_quote_limiter.allow(
+        key, limit=MARKET_QUOTE_LIMIT, window_seconds=MARKET_QUOTE_WINDOW
+    ):
+        raise HTTPException(
+            429,
+            f"Quote rate limit exceeded ({MARKET_QUOTE_LIMIT}/{int(MARKET_QUOTE_WINDOW)}s). "
+            "Slow watchlist refresh slightly.",
+        )
+
+
+async def _fetch_quote_for_user(user_id: str, symbol: str) -> dict[str, Any]:
+    """Shared quote fetch (no rate limit — callers enforce)."""
     sym = (symbol or "").strip().upper()
     if not sym or len(sym) > 16:
         raise HTTPException(400, "Invalid symbol")
 
-    client = await _client_async(user.id)
+    client = await _client_async(user_id)
     source = "sim"
     price: Decimal | None = None
     raw: dict[str, Any] = {}
@@ -893,9 +903,23 @@ async def market_quote(
         "change_percent": str(change_pct) if change_pct is not None else None,
         "source": source,
         "paper": True,
-        "user_id": user.id,
+        "user_id": user_id,
         "raw": raw if settings.public_health_verbose else None,
     }
+
+
+@app.get("/market/quote")
+async def market_quote(
+    symbol: str,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+):
+    """
+    Quote for trading desk watchlist / ticket.
+    Prefers live market data; falls back to PaperSim mark.
+    Rate limited per user.
+    """
+    _rate_limit_quotes(user.id)
+    return await _fetch_quote_for_user(user.id, symbol)
 
 
 @app.get("/market/quotes")
@@ -903,7 +927,8 @@ async def market_quotes(
     symbols: str,
     user: Annotated[CurrentUser, Depends(get_current_user)],
 ):
-    """Batch quotes for watchlist (comma-separated symbols, max 12)."""
+    """Batch quotes for watchlist (comma-separated symbols, max 12). Rate limited per call."""
+    _rate_limit_quotes(user.id)
     parts = [p.strip().upper() for p in (symbols or "").split(",") if p.strip()]
     parts = parts[:12]
     if not parts:
@@ -911,8 +936,7 @@ async def market_quotes(
     out: list[dict[str, Any]] = []
     for sym in parts:
         try:
-            # Reuse single-quote logic without nested FastAPI call
-            one = await market_quote(sym, user)
+            one = await _fetch_quote_for_user(user.id, sym)
             out.append(
                 {
                     "symbol": one["symbol"],
@@ -1215,9 +1239,28 @@ async def create_proposal(
 
 
 @app.get("/proposals")
-async def list_proposals(user: Annotated[CurrentUser, Depends(get_current_user)]):
+async def list_proposals(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    limit: int = 50,
+    offset: int = 0,
+):
     mem = await _mem(user)
-    return {"proposals": mem.list_proposals(), "user_id": user.id}
+    page = page_slice(
+        mem.list_proposals(),
+        limit=limit,
+        offset=offset,
+        reverse=True,
+        default_limit=50,
+        max_limit=200,
+    )
+    return {
+        "proposals": page["items"],
+        "total": page["total"],
+        "limit": page["limit"],
+        "offset": page["offset"],
+        "has_more": page["has_more"],
+        "user_id": user.id,
+    }
 
 
 @app.get("/proposals/{proposal_id}")
@@ -1413,27 +1456,78 @@ async def reject_proposal(
 
 
 @app.get("/journal")
-async def get_journal(user: Annotated[CurrentUser, Depends(get_current_user)]):
+async def get_journal(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    limit: int = 50,
+    offset: int = 0,
+):
     mem = await _mem(user)
-    return {"entries": mem.journals, "user_id": user.id}
+    page = page_slice(
+        mem.journals,
+        limit=limit,
+        offset=offset,
+        reverse=True,
+        default_limit=50,
+        max_limit=200,
+    )
+    return {
+        "entries": page["items"],
+        "total": page["total"],
+        "limit": page["limit"],
+        "offset": page["offset"],
+        "has_more": page["has_more"],
+        "user_id": user.id,
+    }
 
 
 @app.get("/audit")
 async def get_audit(
     user: Annotated[CurrentUser, Depends(get_current_user)],
     limit: int = 100,
+    offset: int = 0,
 ):
     mem = await _mem(user)
+    page = page_slice(
+        mem.audit,
+        limit=limit,
+        offset=offset,
+        reverse=True,
+        default_limit=100,
+        max_limit=500,
+    )
     return {
-        "events": mem.audit[: max(1, min(limit, 500))],
+        "events": page["items"],
+        "total": page["total"],
+        "limit": page["limit"],
+        "offset": page["offset"],
+        "has_more": page["has_more"],
         "user_id": user.id,
     }
 
 
 @app.get("/orders")
-async def get_orders(user: Annotated[CurrentUser, Depends(get_current_user)]):
+async def get_orders(
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    limit: int = 50,
+    offset: int = 0,
+):
     mem = await _mem(user)
-    return {"orders": mem.orders, "user_id": user.id}
+    page = page_slice(
+        mem.orders,
+        limit=limit,
+        offset=offset,
+        reverse=True,
+        default_limit=50,
+        max_limit=200,
+    )
+    return {
+        "orders": page["items"],
+        "total": page["total"],
+        "limit": page["limit"],
+        "offset": page["offset"],
+        "has_more": page["has_more"],
+        "user_id": user.id,
+    }
 
 
 @app.get("/portfolio")
@@ -1489,21 +1583,14 @@ async def paper_reset(
         raise HTTPException(400, "starting_cash must be between 1,000 and 10,000,000")
 
     client.reset(cash)
-    # Persist wiped state
-    try:
-        from app.db.repo import save_paper_state
-
-        st = client.export_state()
-        await save_paper_state(
-            user.id,
-            cash=st["cash"],
-            starting_cash=st["starting_cash"],
-            positions=st["positions"],
-            marks=st["marks"],
-            client_orders=st["client_orders"],
-        )
-    except Exception:  # noqa: BLE001
-        pass
+    # Persist wiped state — surface failure when DB is configured
+    if is_db_available() and hasattr(client, "persist"):
+        try:
+            await client.persist()  # type: ignore[misc]
+        except BrokerError as e:
+            raise HTTPException(502, str(e)) from e
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(502, f"Failed to persist paper reset: {e}") from e
 
     mem = await _mem(user)
     jentry = mem.add_journal(
