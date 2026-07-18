@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import BillingPanel from "@/components/BillingPanel";
 import Chat from "@/components/Chat";
 import DisclaimerBanner from "@/components/DisclaimerBanner";
 import HowItWorks from "@/components/HowItWorks";
@@ -154,11 +153,6 @@ export default function HomePage() {
           </section>
 
           <aside className="flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
-            {/* Plans first — was buried under journal; hard to find */}
-            <div id="plans" className="scroll-mt-20">
-              <BillingPanel onPlanChange={() => void refresh()} />
-            </div>
-
             <Panel
               title="Portfolio telemetry"
               label="book"
