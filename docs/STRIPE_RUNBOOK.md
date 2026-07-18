@@ -4,8 +4,15 @@ PR3 code is shipped. This is env + Dashboard + verification only.
 
 ## 1. Stripe Dashboard
 
-1. Create/use a Product **Pro** monthly price → copy `price_...` as `STRIPE_PRICE_ID_PRO`.
-2. **Developers → API keys** → copy **Secret key** (`sk_test_...` for test).
+**Live products (set 2026-07-18):**
+
+| Plan | Product | Price ID | Env |
+|------|---------|----------|-----|
+| Pro $29/mo | `prod_UuOr5XTY4bkMWP` | `price_1Tua3nCzqBvMqSYFpymfph1u` | **`STRIPE_PRICE_ID_PRO`** (Checkout uses this) |
+| Pro+ $59/mo | `prod_UuOrg6uejcujT8` | `price_1Tua3oCzqBvMqSYFgbmKQo5G` | `STRIPE_PRICE_ID_PRO_PLUS` (stored for later; not in Checkout yet) |
+
+1. ~~Create Pro price~~ done — use Pro price above.
+2. **Developers → API keys** → Secret key on Render (`sk_live_...` set).
 3. **Developers → Webhooks → Add endpoint**
    - URL: `https://tradingbot-api-0990.onrender.com/billing/webhook`
    - Events:
