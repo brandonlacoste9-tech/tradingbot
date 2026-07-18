@@ -17,6 +17,7 @@ type Props = {
   chatBlocked?: boolean;
   blockReason?: string | null;
   onRefresh?: () => void;
+  onOpenPlans?: () => void;
 };
 
 export default function StatusStrip({
@@ -27,6 +28,7 @@ export default function StatusStrip({
   chatBlocked,
   blockReason,
   onRefresh,
+  onOpenPlans,
 }: Props) {
   const used = usage?.used;
   const limit = usage?.limit;
@@ -76,7 +78,25 @@ export default function StatusStrip({
           tone={health?.paper_only ? "good" : "warn"}
         />
         {primary && <Chip label={`DATA ${primary}`} tone="muted" />}
-        {plan && <Chip label={`PLAN ${plan.toUpperCase()}`} tone="accent" />}
+        {plan && (
+          <button
+            type="button"
+            onClick={onOpenPlans}
+            className="hud-chip border-accent/35 text-accent hover:bg-accent/10"
+            title="Open plans & billing"
+          >
+            PLAN {plan.toUpperCase()}
+          </button>
+        )}
+        {onOpenPlans && (
+          <button
+            type="button"
+            onClick={onOpenPlans}
+            className="rounded-full border border-accent/50 bg-accent/15 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/25"
+          >
+            {plan && plan !== "free" ? "Manage plan" : "Plans / Upgrade"}
+          </button>
+        )}
         {onRefresh && (
           <button type="button" onClick={onRefresh} className="hud-btn">
             Sync book

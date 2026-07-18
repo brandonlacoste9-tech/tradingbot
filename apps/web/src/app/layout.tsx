@@ -45,6 +45,12 @@ function AuthChrome() {
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <a
+          href="#plans"
+          className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/20 sm:px-4 sm:py-2 sm:text-sm"
+        >
+          Plans
+        </a>
         <span className="hidden items-center gap-1.5 rounded-full border border-good/30 bg-good/5 px-2.5 py-1 font-mono text-[10px] text-good sm:inline-flex">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
           PAPER ONLY

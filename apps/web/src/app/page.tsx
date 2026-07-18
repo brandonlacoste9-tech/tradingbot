@@ -132,6 +132,11 @@ export default function HomePage() {
               chatBlocked={chatBlocked}
               blockReason={blockReason}
               onRefresh={() => void onValidate()}
+              onOpenPlans={() => {
+                document
+                  .getElementById("plans")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
             />
           </div>
         </div>
@@ -149,6 +154,11 @@ export default function HomePage() {
           </section>
 
           <aside className="flex flex-col gap-4 lg:col-span-5 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-1">
+            {/* Plans first — was buried under journal; hard to find */}
+            <div id="plans" className="scroll-mt-20">
+              <BillingPanel onPlanChange={() => void refresh()} />
+            </div>
+
             <Panel
               title="Portfolio telemetry"
               label="book"
@@ -255,8 +265,6 @@ export default function HomePage() {
                 </div>
               )}
             </Panel>
-
-            <BillingPanel />
 
             <Panel title="Safety rails" label="policy">
               <ul className="space-y-2 text-xs leading-relaxed text-mist">

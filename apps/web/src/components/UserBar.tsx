@@ -49,9 +49,13 @@ export default function UserBar() {
       <span className="rounded-full border border-line px-2.5 py-1 font-mono text-slate-300">
         user: {userId}
       </span>
-      <span className="rounded-full border border-line px-2.5 py-1 text-slate-400">
-        plan: {plan}
-      </span>
+      <a
+        href="#plans"
+        className="rounded-full border border-accent/35 bg-accent/5 px-2.5 py-1 text-accent hover:bg-accent/15"
+        title="Jump to plans & billing"
+      >
+        plan: {plan} · upgrade
+      </a>
       <span className="rounded-full border border-line px-2.5 py-1 text-slate-500">
         auth: {authMode}
         {clerkEnabled ? " · clerk" : " · demo"}
