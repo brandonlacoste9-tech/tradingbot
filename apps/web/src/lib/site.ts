@@ -13,11 +13,11 @@ export function getSiteUrl(): string {
 export const SITE_NAME = "IndieTrades";
 
 export const DEFAULT_DESCRIPTION =
-  "IndieTrades: Grok looks at the market and tells you what looks good or skippable for paper practice — policy checks risk, you confirm, virtual fills. Not investment advice. You're responsible for your decisions.";
+  "IndieTrades is where you practice stock trading before real money — virtual cash, real tickers, optional Grok research, you confirm every paper trade. Not a live broker. Not investment advice.";
 
 /** Short brand line for hero / social */
 export const BRAND_TAGLINE =
-  "Grok calls the setup. You confirm. Paper only — not advice, not our money.";
+  "Practice trading here before you use real money.";
 
 export const SEO_KEYWORDS = [
   "paper trading",

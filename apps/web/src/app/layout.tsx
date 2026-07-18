@@ -60,7 +60,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${SITE_NAME} — Grok Paper Trading Desk | Practice Stocks Free`,
+    default: `${SITE_NAME} — Practice Stock Trading Before Real Money`,
     template: `%s · ${SITE_NAME}`,
   },
   description: DEFAULT_DESCRIPTION,
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
   publisher: SITE_NAME,
   category: "finance",
   openGraph: {
-    title: `${SITE_NAME} — Grok is your market research bro`,
+    title: `${SITE_NAME} — Practice trading before real money`,
     description: DEFAULT_DESCRIPTION,
     url: siteUrl,
     siteName: SITE_NAME,
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Grok paper trading desk`,
+    title: `${SITE_NAME} — Practice before real money`,
     description: DEFAULT_DESCRIPTION,
   },
   robots: {

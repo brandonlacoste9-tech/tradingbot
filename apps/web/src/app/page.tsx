@@ -154,16 +154,16 @@ function HomePageBody({
             <div>
               <p className="hud-label mb-1">AI Desk</p>
               <h1 className="bridge-title text-2xl font-bold tracking-tight sm:text-3xl">
-                Grok reads the market for you
+                Practice before real money
               </h1>
               <p className="mt-1 max-w-lg text-sm leading-relaxed text-mist">
-                He&apos;ll tell you when a setup looks good, meh, or skip —
-                quotes, news, thesis.{" "}
+                IndieTrades is a{" "}
                 <strong className="font-medium text-slate-300">
-                  You confirm every paper trade
+                  paper trading desk
                 </strong>
-                . Not advice. Not our responsibility if you practice a bad idea.
-                Paper only.
+                : real stock symbols, virtual cash, optional Grok research.
+                Learn the ticket, build habits, then go live somewhere else when
+                you&apos;re ready. You confirm every paper trade.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <a

@@ -345,13 +345,14 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <div className="min-w-0">
             <p className="hud-label mb-1">Trade floor</p>
             <h1 className="bridge-title text-xl font-bold tracking-tight sm:text-3xl">
-              Practice like it&apos;s real
+              Practice before real money
             </h1>
             <p className="mt-1 max-w-xl text-sm text-mist">
-              Tap symbol → size → review → confirm.
+              Tap symbol → size → review → confirm. Paper fills only — build
+              skill here first.
               <span className="hidden sm:inline">
                 {" "}
-                Grok research on the{" "}
+                Research with Grok on the{" "}
                 <a href="/" className="text-accent hover:underline">
                   AI Desk
                 </a>

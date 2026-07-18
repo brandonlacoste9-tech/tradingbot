@@ -216,11 +216,11 @@ function ChatBody({
           <div>
             <div className="hud-label">Chat · Grok</div>
             <h2 className="text-base font-semibold text-white">
-              What looks good right now?
+              Practice with a research bro
             </h2>
             <p className="text-xs text-mist">
-              Market takes + paper proposals — his opinion, your call, virtual
-              fills
+              Ask what looks good, get a paper proposal — practice first, real
+              money later (elsewhere)
             </p>
           </div>
           {busy && (

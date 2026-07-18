@@ -46,7 +46,7 @@ export default function Image() {
               maxWidth: 900,
             }}
           >
-            AI paper trading desk
+            Practice before real money
           </div>
           <div
             style={{
@@ -56,7 +56,7 @@ export default function Image() {
               lineHeight: 1.35,
             }}
           >
-            Grok researches · policy gates risk · you confirm · PaperSim fills
+            Paper desk · real tickers · Grok research · you confirm every fill
           </div>
         </div>
         <div

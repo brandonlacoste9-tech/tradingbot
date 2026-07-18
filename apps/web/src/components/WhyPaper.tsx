@@ -4,24 +4,24 @@ import { useState } from "react";
 
 const REASONS = [
   {
+    icon: "🎯",
+    title: "Before real money",
+    body: "Practice the full loop here — then trade live at a real broker when you’re ready. We stay paper.",
+  },
+  {
     icon: "🌱",
-    title: "Not enough capital yet",
-    body: "Practice real stock workflows with $100k virtual cash — no deposit required.",
+    title: "No capital required",
+    body: "Virtual cash (~$100k book), real tickers, reset anytime. Learn without depositing.",
   },
   {
     icon: "🧭",
     title: "Not sure where to start",
-    body: "Grok as your research bro on AI Desk. Trade floor when you’re ready to ticket. Policy + confirm keeps it safe.",
-  },
-  {
-    icon: "🧪",
-    title: "Test strategies risk-free",
-    body: "Try ideas, journal results, reset anytime. Same muscles as live — zero bank risk.",
+    body: "Grok digs the market. Trade floor for tickets. Policy + you confirm every paper fill.",
   },
   {
     icon: "🛡️",
-    title: "Opinion, not orders",
-    body: "Grok can flag what looks good in the market. Policy + you confirm. Paper only — outcomes are on you, not us.",
+    title: "Practice safely",
+    body: "No live brokerage. Grok’s takes are opinions. You decide. Outcomes of practice are on you.",
   },
 ];
 
@@ -45,9 +45,9 @@ export default function WhyPaper({ defaultOpen = true }: Props) {
         aria-expanded={open}
       >
         <div className="min-w-0">
-          <span className="hud-label">Why paper?</span>
+          <span className="hud-label">Why practice here?</span>
           <p className="truncate text-sm font-medium text-slate-200">
-            Real stocks. Fake money. Real practice.
+            Practice trading before you use real money.
           </p>
         </div>
         <span className="flex shrink-0 items-center gap-2">
