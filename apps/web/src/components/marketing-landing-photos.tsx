@@ -62,27 +62,6 @@ const PILLARS = [
   },
 ] as const;
 
-const SHOTS = [
-  {
-    src: "/landing/trade-floor.jpg",
-    alt: "IndieTrades paper trade floor — chart, ticket, watchlist, blotter",
-    label: "Trade floor",
-    caption: "Chart · ticket · blotter · PAPER",
-  },
-  {
-    src: "/landing/ai-desk.jpg",
-    alt: "IndieTrades AI Desk — Grok research and paper book",
-    label: "AI Desk",
-    caption: "Research · propose · you confirm",
-  },
-  {
-    src: "/landing/mobile-ticket.jpg",
-    alt: "IndieTrades mobile paper order ticket",
-    label: "Mobile ticket",
-    caption: "Practice on your phone",
-  },
-] as const;
-
 /** Decorative tape — visual only, not live prices */
 function MarketRibbon() {
   const row = [
