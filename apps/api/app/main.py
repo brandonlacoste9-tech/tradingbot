@@ -29,7 +29,11 @@ from app.admin.controls import (
     set_user_kill,
 )
 from app.admin.llm_breaker import get_llm_breaker, reset_llm_breaker
-from app.agent.loop import run_agent_turn_demo, run_agent_turn_llm
+from app.agent.loop import (
+    run_agent_turn_demo,
+    run_agent_turn_llm,
+    summarize_demo_tools,
+)
 from app.auth import CurrentUser, get_current_user
 from app.billing.plans import PLAN_LIMITS, normalize_plan
 from app.billing.stripe_svc import (
@@ -912,14 +916,18 @@ async def agent_chat(
             except Exception as e:  # noqa: BLE001
                 tool_results.append({"tool": tool, "ok": False, "error": str(e)})
 
+    assistant_text = plan.get("assistant_text") or ""
+    if plan.get("mode") == "demo" and tool_results:
+        assistant_text = summarize_demo_tools(assistant_text, tool_results)
+
     return {
-        "assistant_text": plan.get("assistant_text"),
+        "assistant_text": assistant_text,
         "mode": plan.get("mode"),
         "tool_results": tool_results,
         "proposal": proposal,
         "confirm_ttl_seconds": _ttl(),
         "model": plan.get("model"),
-        "provider": plan.get("provider"),
+        "provider": plan.get("provider") or ("demo" if plan.get("mode") == "demo" else None),
         "llm_enabled": llm_on,
         "llm_circuit": get_llm_breaker().snapshot()["state"],
         "user_id": user.id,

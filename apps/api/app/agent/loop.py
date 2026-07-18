@@ -299,26 +299,84 @@ def _safe_json(obj: Any) -> str:
         return json.dumps({"repr": str(obj)[:4000]})
 
 
+_TICKER_RE = re.compile(
+    r"\b(?:quote|price|of|for|on|ticker|symbol|about|research|news|bars?|chart)\s+"
+    r"([A-Za-z]{1,5})\b",
+    re.I,
+)
+_BARE_TICKER_RE = re.compile(r"^\s*([A-Za-z]{1,5})\s*$")
+# Common liquid names for bare demos
+_KNOWN = {
+    "spy",
+    "qqq",
+    "iwm",
+    "aapl",
+    "msft",
+    "nvda",
+    "tsla",
+    "amzn",
+    "googl",
+    "meta",
+    "amd",
+    "nflx",
+}
+
+
+def _extract_ticker(text: str, lower: str) -> str | None:
+    m = _TICKER_RE.search(text)
+    if m:
+        return m.group(1).upper().rstrip(".")
+    m2 = _BARE_TICKER_RE.match(text)
+    if m2 and m2.group(1).lower() in _KNOWN:
+        return m2.group(1).upper()
+    for t in _KNOWN:
+        if re.search(rf"\b{t}\b", lower):
+            return t.upper()
+    # $AAPL style
+    m3 = re.search(r"\$([A-Za-z]{1,5})\b", text)
+    if m3:
+        return m3.group(1).upper()
+    return None
+
+
 def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
     """
-    Lightweight keyword demo so the full proposal → policy → confirm flow
-    works without an LLM API key.
+    Keyword + ticker demo path so the desk stays useful without an LLM key.
+    Still never submits orders — only proposes / holds / research tools.
     """
     text = user_message.strip()
     lower = text.lower()
+    ticker = _extract_ticker(text, lower)
 
     if any(
         k in lower
-        for k in ("hold", "do nothing", "do not trade", "don't trade", "no trade")
+        for k in ("hold", "do nothing", "do not trade", "don't trade", "no trade", "no edge")
     ):
         reason = text if len(text) >= 8 else "Conditions do not justify a new trade today."
         return {
             "mode": "demo",
             "assistant_text": "Logging a hold / do-nothing decision.",
+            "actions": [{"tool": "decide_hold", "args": {"reason": reason}}],
+        }
+
+    # Quote / price first (before generic research)
+    if any(k in lower for k in ("quote", "price", "how much is", "trading at", "last trade")):
+        symbol = ticker or "SPY"
+        return {
+            "mode": "demo",
+            "assistant_text": f"Pulling latest available quote for {symbol}…",
+            "actions": [{"tool": "get_quote", "args": {"symbol": symbol}}],
+        }
+
+    if any(k in lower for k in ("bar", "chart", "ohlc", "candles", "history")):
+        symbol = ticker or "SPY"
+        return {
+            "mode": "demo",
+            "assistant_text": f"Fetching daily bars for {symbol}…",
             "actions": [
                 {
-                    "tool": "decide_hold",
-                    "args": {"reason": reason},
+                    "tool": "get_bars",
+                    "args": {"symbol": symbol, "timeframe": "1Day", "limit": 30},
                 }
             ],
         }
@@ -333,25 +391,49 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             "google",
             "what is happening",
             "headline",
+            "news",
+            "why is",
+            "catalyst",
         )
     ):
         q = text
-        for prefix in ("search for", "search", "research", "look up", "lookup"):
+        for prefix in (
+            "search for",
+            "search",
+            "research",
+            "look up",
+            "lookup",
+            "news on",
+            "news for",
+            "news about",
+            "news",
+        ):
             if lower.startswith(prefix):
                 q = text[len(prefix) :].strip(" :,-") or text
                 break
+        if ticker and ticker.lower() not in q.lower():
+            q = f"{ticker} {q}"
+        actions: list[dict[str, Any]] = [
+            {"tool": "web_search", "args": {"query": q[:200], "max_results": 5}}
+        ]
+        if ticker:
+            actions.insert(0, {"tool": "get_quote", "args": {"symbol": ticker}})
+            actions.append(
+                {"tool": "get_news", "args": {"symbol": ticker, "limit": 5}}
+            )
         return {
             "mode": "demo",
-            "assistant_text": f"Searching the web for: {q[:120]}…",
-            "actions": [
-                {
-                    "tool": "web_search",
-                    "args": {"query": q[:200], "max_results": 5},
-                }
-            ],
+            "assistant_text": (
+                f"Researching{f' {ticker}' if ticker else ''}… "
+                "pulling market data + web context."
+            ),
+            "actions": actions,
         }
 
-    if any(k in lower for k in ("buying power", "account", "equity", "cash balance")):
+    if any(
+        k in lower
+        for k in ("buying power", "account", "equity", "cash balance", "portfolio", "how much cash")
+    ):
         return {
             "mode": "demo",
             "assistant_text": "Fetching paper account details…",
@@ -363,23 +445,6 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
             "mode": "demo",
             "assistant_text": "Fetching open positions…",
             "actions": [{"tool": "get_positions", "args": {}}],
-        }
-
-    news_m = re.search(r"news\s+(?:on|for|about)?\s*([A-Za-z.]{1,8})", text, re.I)
-    if "news" in lower:
-        symbol = (news_m.group(1) if news_m else "SPY").upper().rstrip(".")
-        return {
-            "mode": "demo",
-            "assistant_text": f"Researching news for {symbol} via web search…",
-            "actions": [
-                {
-                    "tool": "web_search",
-                    "args": {
-                        "query": f"{symbol} stock news",
-                        "max_results": 5,
-                    },
-                }
-            ],
         }
 
     buy_m = re.search(
@@ -401,11 +466,12 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
 
     if buy_m or sell_m:
         m = buy_m or sell_m
+        assert m is not None
         side = "buy" if buy_m else "sell"
         qty = Decimal(m.group(1) or "1")
         symbol = m.group(2).upper().rstrip(".")
         limit = Decimal(m.group(3)) if m.group(3) else None
-        reason = f"Demo proposal from chat: {text[:200]}"
+        reason = f"Desk proposal from chat: {text[:200]}"
         args: dict[str, Any] = {
             "symbol": symbol,
             "side": side,
@@ -421,15 +487,121 @@ def run_agent_turn_demo(user_message: str) -> dict[str, Any]:
                 f"Creating a {side} proposal for {qty} {symbol}. "
                 "Policy must pass, then you confirm in the preflight modal."
             ),
-            "actions": [{"tool": "propose_order", "args": args}],
+            "actions": [
+                {"tool": "get_quote", "args": {"symbol": symbol}},
+                {"tool": "propose_order", "args": args},
+            ],
+        }
+
+    # Bare / short ticker → quote + light research
+    if ticker and len(text) < 40:
+        return {
+            "mode": "demo",
+            "assistant_text": f"Looking up {ticker} (quote + context)…",
+            "actions": [
+                {"tool": "get_quote", "args": {"symbol": ticker}},
+                {
+                    "tool": "web_search",
+                    "args": {"query": f"{ticker} stock", "max_results": 4},
+                },
+            ],
         }
 
     return {
         "mode": "demo",
         "assistant_text": (
-            "I can: search/research the web, check buying power, list positions, "
-            "propose a limit buy/sell (policy + confirm), or log a hold. "
-            "Try: “Research NVDA AI chips” or “Propose a limit buy of 1 share of SPY”"
+            "Shipboard demo mode (Grok LLM offline). I can still run tools:\n"
+            "· Quote AAPL / NVDA\n"
+            "· Research NVDA AI chips\n"
+            "· What is my buying power?\n"
+            "· Propose a limit buy of 1 share of SPY\n"
+            "· Hold — no edge today\n"
+            "Set XAI_API_KEY on the API for full Grok research."
         ),
         "actions": [],
     }
+
+
+def summarize_demo_tools(
+    assistant_text: str, tool_results: list[dict[str, Any]]
+) -> str:
+    """Turn raw tool results into a readable reply for demo mode."""
+    if not tool_results:
+        return assistant_text
+    bits: list[str] = []
+    for tr in tool_results:
+        if not tr.get("ok"):
+            bits.append(f"· {tr.get('tool')}: failed — {tr.get('error') or 'error'}")
+            continue
+        tool = tr.get("tool")
+        result = tr.get("result")
+        if not isinstance(result, dict):
+            bits.append(f"· {tool}: ok")
+            continue
+        if tool == "get_quote":
+            px = result.get("close") or result.get("price")
+            src = result.get("source") or "market"
+            bits.append(f"· Quote {result.get('symbol', '')}: **{px}** ({src})")
+        elif tool == "get_account":
+            bits.append(
+                f"· Account equity **{result.get('equity')}** · "
+                f"cash **{result.get('cash')}** · "
+                f"BP **{result.get('buying_power')}**"
+            )
+        elif tool == "get_positions":
+            # positions may be list at top level or nested
+            pos = result if isinstance(result, list) else result.get("positions")
+            if isinstance(pos, list):
+                if not pos:
+                    bits.append("· Positions: none open")
+                else:
+                    syms = ", ".join(
+                        f"{p.get('symbol')}×{p.get('qty')}" for p in pos[:8] if isinstance(p, dict)
+                    )
+                    bits.append(f"· Positions: {syms}")
+            else:
+                bits.append("· Positions fetched")
+        elif tool == "web_search":
+            results = result.get("results") or result.get("organic") or []
+            if isinstance(results, list) and results:
+                lines = []
+                for r in results[:4]:
+                    if isinstance(r, dict):
+                        title = r.get("title") or r.get("text") or ""
+                        lines.append(f"  – {str(title)[:100]}")
+                bits.append("· Web:\n" + "\n".join(lines) if lines else "· Web search ok")
+            else:
+                bits.append("· Web search completed")
+        elif tool == "get_news":
+            news = result.get("news") or []
+            if isinstance(news, list) and news:
+                titles = []
+                for n in news[:3]:
+                    if isinstance(n, dict):
+                        titles.append(f"  – {str(n.get('title') or '')[:100]}")
+                bits.append("· News:\n" + "\n".join(titles) if titles else "· News ok")
+            else:
+                note = result.get("note") or result.get("massive_error") or "no headlines"
+                bits.append(f"· News: {note}")
+        elif tool == "get_bars":
+            bars = result.get("bars") or []
+            n = len(bars) if isinstance(bars, list) else 0
+            bits.append(f"· Bars: {n} ({result.get('source') or 'ok'})")
+        elif tool == "propose_order":
+            st = result.get("policy_status")
+            bits.append(
+                f"· Proposal **{result.get('side')} {result.get('qty')} "
+                f"{result.get('symbol')}** · status `{st}`"
+                + (
+                    f" · {result.get('rejection_reason')}"
+                    if st == "policy_rejected"
+                    else " · confirm in preflight"
+                )
+            )
+        elif tool == "decide_hold":
+            bits.append(f"· Hold logged: {result.get('reason') or 'ok'}")
+        else:
+            bits.append(f"· {tool}: ok")
+
+    body = "\n".join(bits)
+    return f"{assistant_text}\n\n{body}"
