@@ -4,7 +4,7 @@
 **API:** https://tradingbot-api-0990.onrender.com/health  
 **Date:** 2026-07-18  
 **Audience:** Grok product/eng (Harper, Lucas, Benjamin + lead)  
-**Status:** **Beta-ready paper desk** · Hybrid C live · freeze held · **team aligned with owner lean** (2026-07-18)  
+**Status:** **Soft-launch ready** · P&L + Orders feel-check **greenlit** · Phase 4 freeze held · team aligned (2026-07-18)  
 
 ---
 
@@ -132,11 +132,13 @@ Someone can:
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | Day/book P&L −50% after $50k budget (starting_cash not updated in Postgres) | **Fixed** — UPDATE starting_cash + empty-book heal + label **Book P&L** |
-| 2 | Orders row `Limit —` / symbol `—` | **Fixed** — flatten raw_response + merge sim working book + UI fallbacks |
+| 1 | Day/book P&L −50% after $50k budget (starting_cash not updated in Postgres) | **Greenlit live** — Book P&L $0 on $50k clean book · chip + book start aligned |
+| 2 | Orders row `Limit —` / symbol `—` | **Greenlit live** — e.g. WORKING · BUY 1 SPY · Limit 333.74 · Cancel |
 | 3 | Quotes as-of brief `—` | Minor · leave |
 | 4 | Clerk `pk_test_` / prod DNS | Later — before paid ads |
 | 5 | Chg% blank on some names | Cosmetic · leave |
+
+**Browser feel-check (post-deploy + heal):** label Book P&L · chip $50k · cash = start · working row full fields · hybrid blotter real.
 
 ## 7. Open / later (not in sprint)
 
@@ -179,4 +181,13 @@ Someone can:
 
 ---
 
-**Standing by** for feel-check notes or a specific polish ask.
+### Soft-launch bars
+
+| Bar | Status |
+|-----|--------|
+| **Friends / soft launch** | **Ready** — desk, hybrid, Book P&L, Orders UI, disclaimer, routes |
+| **Paid ads** | Still: Clerk production · Stripe E2E · support |
+
+**Bottom line:** P&L + Orders punch list greenlit in browser. Protect the paper line; beta/friends OK. Paid traffic waits on Clerk prod + Stripe.
+
+**Standing by** for soft-launch invites, paid-traffic ops (Clerk/Stripe), or a specific polish ask.
