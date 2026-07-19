@@ -190,4 +190,6 @@ Someone can:
 
 **Bottom line:** P&L + Orders punch list greenlit in browser. Protect the paper line; beta/friends OK. Paid traffic waits on Clerk prod + Stripe.
 
-**Standing by** for soft-launch invites, paid-traffic ops (Clerk/Stripe), or a specific polish ask.
+**Soft launch ops:** [`SOFT_LAUNCH.md`](./SOFT_LAUNCH.md) — pre-flight, invite copy, feedback loop, success criteria.
+
+**Standing by** for invite sends, feedback notes, or paid-traffic ops (Clerk/Stripe).
