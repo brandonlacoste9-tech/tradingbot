@@ -8,6 +8,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import DeskTip from "@/components/DeskTip";
 import PreflightModal from "@/components/PreflightModal";
 import SymbolChart, { type ChartBar } from "@/components/symbol-chart";
 import {
@@ -22,6 +23,7 @@ import {
   portfolio,
   validateConnection,
 } from "@/lib/api";
+import { TRADE_TIPS, type TradeTipId } from "@/lib/trade-tooltips";
 import type { TradeProposal } from "@/lib/types";
 
 const clerkEnabled = Boolean(
@@ -615,24 +617,30 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
       <div className="sticky top-0 z-30 border-b border-good/30 bg-panel/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-good/50 bg-good/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-good">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
-              Paper only
-            </span>
-            {session && (
-              <span
-                className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
-                  session.us_rth_open
-                    ? "border-good/40 text-good"
-                    : "border-line text-mist"
-                }`}
-              >
-                {session.label}
+            <DeskTip tip="paperOnly">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-good/50 bg-good/15 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-good">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-good" />
+                Paper only
               </span>
+            </DeskTip>
+            {session && (
+              <DeskTip tip="usRth">
+                <span
+                  className={`rounded-full border px-2 py-0.5 font-mono text-[10px] ${
+                    session.us_rth_open
+                      ? "border-good/40 text-good"
+                      : "border-line text-mist"
+                  }`}
+                >
+                  {session.label}
+                </span>
+              </DeskTip>
             )}
-            <span className="font-mono text-[10px] text-mist">
-              Quotes as of {asOf}
-            </span>
+            <DeskTip tip="quotesAsOf">
+              <span className="font-mono text-[10px] text-mist">
+                Quotes as of {asOf}
+              </span>
+            </DeskTip>
           </div>
           <div className="flex gap-2">
             <button
@@ -671,6 +679,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           </div>
           <button
             type="button"
+            title={TRADE_TIPS.paperBudget}
             disabled={resetBusy}
             onClick={() => setShowBudget(true)}
             className="min-h-11 shrink-0 rounded-full border border-warn/40 bg-warn/10 px-4 py-2 text-xs font-semibold text-warn disabled:opacity-50"
@@ -734,11 +743,24 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
 
         {/* Account strip */}
         <div className="mb-1 grid grid-cols-2 gap-2 sm:grid-cols-5">
-          <Stat label="Net liq" value={loading ? "…" : fmtMoney(equity)} />
-          <Stat label="Cash" value={loading ? "…" : fmtMoney(cash)} />
-          <Stat label="Buying power" value={loading ? "…" : fmtMoney(bp)} />
+          <Stat
+            label="Net liq"
+            tip="netLiq"
+            value={loading ? "…" : fmtMoney(equity)}
+          />
+          <Stat
+            label="Cash"
+            tip="cash"
+            value={loading ? "…" : fmtMoney(cash)}
+          />
+          <Stat
+            label="Buying power"
+            tip="buyingPower"
+            value={loading ? "…" : fmtMoney(bp)}
+          />
           <Stat
             label="Book P&L"
+            tip="bookPnl"
             value={
               loading
                 ? "…"
@@ -752,6 +774,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           />
           <Stat
             label="Open P&L"
+            tip="openPnl"
             value={loading ? "…" : fmtMoney(openPnl)}
             valueClass={pnlClass(openPnl)}
             className="col-span-2 sm:col-span-1"
@@ -775,7 +798,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
           <section className="hud-panel order-2 lg:order-1 lg:col-span-3">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">Watchlist</h2>
-              <span className="font-mono text-[10px] text-mist">Last · Chg%</span>
+              <span className="flex items-center gap-1 font-mono text-[10px] text-mist">
+                <DeskTip tip="last">Last</DeskTip>
+                <span>·</span>
+                <DeskTip tip="chgPct">Chg%</DeskTip>
+              </span>
             </div>
             <div className="mb-1 grid grid-cols-[1fr_auto_auto] gap-2 px-1 font-mono text-[10px] uppercase text-mist">
               <span>Sym</span>
@@ -950,8 +977,8 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
-                      Limit
+                    <span className="mb-1 flex items-center gap-1 font-mono text-[10px] uppercase text-mist">
+                      <DeskTip tip="limit">Limit</DeskTip>
                     </span>
                     <input
                       value={limit}
@@ -963,8 +990,8 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                     />
                   </label>
                   <label className="block">
-                    <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
-                      TIF
+                    <span className="mb-1 flex items-center gap-1 font-mono text-[10px] uppercase text-mist">
+                      <DeskTip tip="tifDay">TIF</DeskTip>
                     </span>
                     <div className="hud-input flex min-h-[42px] items-center rounded-xl px-3 font-mono text-sm text-slate-300">
                       {tif}
@@ -989,6 +1016,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                   {maxShares != null && maxShares > 0 && (
                     <button
                       type="button"
+                      title={TRADE_TIPS.maxShares}
                       onClick={() => setQty(String(maxShares))}
                       className="min-h-9 rounded-full border border-good/40 px-2.5 font-mono text-[11px] text-good"
                     >
@@ -997,8 +1025,8 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                   )}
                 </div>
                 <label className="block">
-                  <span className="mb-1 block font-mono text-[10px] uppercase text-mist">
-                    Reason (required)
+                  <span className="mb-1 flex items-center gap-1 font-mono text-[10px] uppercase text-mist">
+                    <DeskTip tip="reason">Reason (required)</DeskTip>
                   </span>
                   <textarea
                     value={reason}
@@ -1010,14 +1038,20 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                 </label>
                 <p className="font-mono text-xs text-mist">
                   {notionalPreview != null ? (
-                    <>Est. {fmtMoney(notionalPreview)} · Limit · TIF Day · paper</>
+                    <DeskTip tip="estNotional">
+                      <>Est. {fmtMoney(notionalPreview)} · Limit · TIF Day · paper</>
+                    </DeskTip>
                   ) : (
                     "Enter qty + limit"
                   )}
                 </p>
                 <p className="text-[11px] leading-snug text-mist">
-                  Aggressive limits fill at last/mark after confirm. Passiveive
-                  limits rest in Orders (paper — not exchange matching).
+                  <DeskTip tip="aggressivePassive">
+                    <span>
+                      Aggressive limits fill at last/mark after confirm. Passiveive
+                      limits rest in Orders (paper — not exchange matching).
+                    </span>
+                  </DeskTip>
                 </p>
                 <button
                   type="submit"
@@ -1036,14 +1070,15 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
               <div className="mb-3 flex gap-1 rounded-full border border-line p-0.5">
                 {(
                   [
-                    ["positions", "Positions", positions.length],
-                    ["orders", "Orders", workingOrders.length],
-                    ["fills", "Fills", fillOrders.length],
+                    ["positions", "Positions", positions.length, "positions"],
+                    ["orders", "Orders", workingOrders.length, "orders"],
+                    ["fills", "Fills", fillOrders.length, "fills"],
                   ] as const
-                ).map(([id, label, count]) => (
+                ).map(([id, label, count, tipId]) => (
                   <button
                     key={id}
                     type="button"
+                    title={TRADE_TIPS[tipId]}
                     onClick={() => setBlotter(id)}
                     className={`min-h-10 flex-1 rounded-full px-2 py-1 text-xs font-semibold ${
                       blotter === id
@@ -1139,9 +1174,11 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <span className="rounded border border-accent/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-accent">
-                                  working
-                                </span>
+                                <DeskTip tip="working">
+                                  <span className="rounded border border-accent/40 px-1.5 py-0.5 text-[10px] font-bold uppercase text-accent">
+                                    working
+                                  </span>
+                                </DeskTip>
                                 <span className="ml-2 font-bold text-white">
                                   {side} {qty} {sym}
                                 </span>
@@ -1152,6 +1189,7 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
                               </div>
                               <button
                                 type="button"
+                                title={TRADE_TIPS.cancel}
                                 disabled={cancelBusy === id}
                                 onClick={() => void onCancelWorking(o)}
                                 className="min-h-9 shrink-0 rounded-lg border border-bad/40 px-2 py-1 text-[10px] font-semibold text-bad hover:bg-bad/10 disabled:opacity-50"
@@ -1391,11 +1429,13 @@ function TradeDesk({ signedIn }: { signedIn: boolean }) {
 
 function Stat({
   label,
+  tip,
   value,
   valueClass,
   className = "",
 }: {
   label: string;
+  tip?: TradeTipId;
   value: string;
   valueClass?: string;
   className?: string;
@@ -1405,7 +1445,7 @@ function Stat({
       className={`rounded-xl border border-line/70 bg-panel/60 px-3 py-3 ${className}`}
     >
       <p className="font-mono text-[10px] uppercase tracking-wider text-mist">
-        {label}
+        {tip ? <DeskTip tip={tip}>{label}</DeskTip> : label}
       </p>
       <p
         className={`mt-1 truncate font-mono text-sm font-semibold sm:text-base ${
